@@ -82,7 +82,7 @@ class melScaling(object):
 		dn = (filterEnd-numpy.array(xrange(filterCentre,filterEnd)))/k2
 		filt[filterStart:filterCentre] = up
 		filt[filterCentre:filterEnd] = dn
-						
+
 	def warpSpectrum(self,magnitudeSpectrum):
 		'''Compute the Mel scaled spectrum.'''
 		return numpy.dot(magnitudeSpectrum,self.filterMatrix)

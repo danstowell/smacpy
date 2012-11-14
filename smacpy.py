@@ -111,6 +111,8 @@ def file_to_features(wavpath):
 	if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
 	window = np.hamming(framelen)
 	features = []
+	mfccMaker = melScaling(int(fs), framelen/2, 40)
+	mfccMaker.update()
 	while(True):
 		try:
 			chunk = sf.read_frames(framelen, dtype=np.float32)
@@ -121,7 +123,6 @@ def file_to_features(wavpath):
 			magspec = abs(framespectrum[:framelen/2])
 
 			# do the frequency warping and MFCC computation
-			mfccMaker = melScaling(int(fs), framelen/2, 40)
 			melSpectrum = mfccMaker.warpSpectrum(magspec)
 			melCepstrum = mfccMaker.getMFCCs(melSpectrum,cn=True)
 			melCepstrum = melCepstrum[1:]   # exclude zeroth coefficient
@@ -147,15 +148,15 @@ if __name__ == '__main__':
 	trainingdata = {}
 	pattern = os.path.join(foldername, '*.wav')
 	for wavpath in glob(pattern):
-		label = os.path.basename(wavpath).split('-')[0]
+		label = os.path.basename(wavpath).split('_')[0]
 		shortwavpath = os.path.relpath(wavpath, foldername)
-		trainingdata{shortwavpath} = label
+		trainingdata[shortwavpath] = label
 	if len(trainingdata)==0:
 		raise RuntimeError("Found no files using this pattern: %s" % pattern)
 	if verbose:
 		print "Class-labels and filenames to be used in training:"
-		for wavpath,label in trainingdata.iteritems():
-			print " %s: %s" % (label, wavpath)
+		for wavpath,label in sorted(trainingdata.iteritems()):
+			print " %s: \t %s" % (label, wavpath)
 
 	model = Smacpy(foldername, trainingdata)
 
