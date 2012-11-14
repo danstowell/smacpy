@@ -1,0 +1,41 @@
+
+smacpy - simple-minded audio classifier in python
+=================================================
+
+Copyright (c) 2012 Dan Stowell and Queen Mary University of London
+(incorporating code Copyright (c) 2009 Gyorgy Fazekas and Queen Mary University of London)
+for licence information see the file named COPYING.
+
+This is a classifier that you can train on a set of labelled audio files, and then it predicts a label for further audio files.
+It is designed with two main aims:
+ (1) to provide a baseline against which to test more advanced audio classifiers;
+ (2) to provide a simple code example of a classifier which people are free to build on.
+
+It uses the very common workflow of taking audio, converting it frame-by-frame into MFCCs, and modelling the MFCC "bag of frames" with a GMM.
+
+Requirements
+------------
+* Python 2.x (has been tested in python 2.7)
+* Python modules:
+    * numpy
+    * scikits.audiolab
+    * sklearn.mixture
+
+
+Usage example 1: commandline
+-------------
+If you invoke the script from the commandline (e.g. "python smacpy.py") it will assume there is a folder called "wavs"
+and inside that folder are multiple WAV files, each of which has an underscore in the filename,
+and the class label is the text BEFORE the underscore.
+It will train a model using the wavs, and then test it on the same wavs.
+This can be a useful test that the script is working;
+however, remember that for proper evaluation you must test using files independent from the training files.
+
+Usage example 2: from your own code
+-------------
+In this hypothetical example we train on four audio files, labelled as either 'usa' or 'uk', and then test on a separate audio file of someone called hubert:
+
+	from smacpy import Smacpy
+	model = Smacpy("wavs/training", {'karen01.wav':'usa', 'john01.wav':'uk', 'steve02.wav':'usa', 'joe03.wav':'uk'})
+	model.classify('wavs/testing/hubert01.wav')
+
