@@ -52,26 +52,32 @@ model.classify('wavs/testing/hubert01.wav')
 		'wavfolder' is the base folder, to be prepended to all WAV paths.
 		'trainingdata' is a dictionary of wavpath:label pairs."""
 
-		allfeatures = {wavpath:file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in trainingdata}
+		self.mfccMaker = melScaling(int(fs), framelen/2, 40)
+		self.mfccMaker.update()
 
-		# Now determine the normalisation stats, remember them
-		self.means = np.mean(anarray, 0)
-		self.theinvstds = np.std(anarray, 0)
-		for i,val in enumerate(self.theinvstds):
+		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in trainingdata}
+
+		# Determine the normalisation stats, and remember them
+		allconcat = np.vstack(allfeatures.values())
+		self.means = np.mean(allconcat, 0)
+		self.invstds = np.std(allconcat, 0)
+		for i,val in enumerate(self.invstds):
 			if val == 0.0:
-				self.theinvstds[i] = 1.0
+				self.invstds[i] = 1.0
 			else:
-				self.theinvstds[i] = 1.0 / val		
+				self.invstds[i] = 1.0 / val
 
 		# For each label, compile a normalised concatenated list of features
 		aggfeatures = {}
 		for wavpath, features in allfeatures.iteritems():
 			label = trainingdata[wavpath]
+			normed = self.__normalise(features)
 			if label not in aggfeatures:
-				aggfeatures[label] = np.array([])
-			aggfeatures[label] = np.hstack((aggfeatures[label], self.__normalise(features)))
+				aggfeatures[label] = normed
+			else:
+				aggfeatures[label] = np.vstack((aggfeatures[label], normed))
 
-		# For each label, train a GMM and remember it
+		# For each label's aggregated features, train a GMM and remember it
 		self.gmms = {}
 		for label, aggf in aggfeatures.iteritems():
 			if verbose:
@@ -87,59 +93,54 @@ model.classify('wavs/testing/hubert01.wav')
 
 	def classify(self, wavpath):
 		"Specify the path to an audio file, and this returns the max-likelihood class, as a string label."
-		features = self.__normalise(file_to_features(wavpath))
+		features = self.__normalise(self.file_to_features(wavpath))
 		# For each label GMM, find the overall log-likelihood and choose the strongest
 		bestlabel = ''
 		bestll = -9e99
-		# Choose the biggest
 		for label, gmm in self.gmms.iteritems():
-			ll = np.sum(gmm.eval(features))
+			ll = gmm.eval(features)[0]
+			ll = np.sum(ll)
 			if ll > bestll:
 				bestll = ll
 				bestlabel = label
 		return bestlabel
 
-#######################################################################
-# auxiliary functions
+	def file_to_features(self, wavpath):
+		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
+		if verbose: print "Reading %s" % wavpath
+		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
+		sf = Sndfile(wavpath, "r")
+		if sf.channels != 1:            raise ValueError("sound file has multiple channels (%i) - mono audio required." % sf.channels)
+		if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
+		window = np.hamming(framelen)
+		features = []
+		while(True):
+			try:
+				chunk = sf.read_frames(framelen, dtype=np.float32)
+				if len(chunk) != framelen:
+					print "Not read sufficient samples - returning"
+					break
+				framespectrum = np.fft.fft(window * chunk)
+				magspec = abs(framespectrum[:framelen/2])
 
-def file_to_features(wavpath):
-	"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
-	if verbose: print "Reading %s" % wavpath
-	if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
-	sf = Sndfile(wavpath, "r")
-	if sf.channels != 1:            raise ValueError("sound file has multiple channels (%i) - mono audio required." % sf.channels)
-	if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
-	window = np.hamming(framelen)
-	features = []
-	mfccMaker = melScaling(int(fs), framelen/2, 40)
-	mfccMaker.update()
-	while(True):
-		try:
-			chunk = sf.read_frames(framelen, dtype=np.float32)
-			if len(chunk) != framelen:
-				print "Not read sufficient samples - returning"
+				# do the frequency warping and MFCC computation
+				melSpectrum = self.mfccMaker.warpSpectrum(magspec)
+				melCepstrum = self.mfccMaker.getMFCCs(melSpectrum,cn=True)
+				melCepstrum = melCepstrum[1:]   # exclude zeroth coefficient
+				melCepstrum = melCepstrum[:13] # limit to lower MFCCs
+
+				framefeatures = melCepstrum   # todo: include deltas? that can be your homework.
+
+				features.append(framefeatures)
+			except RuntimeError:
 				break
-			framespectrum = np.fft.fft(window * chunk)
-			magspec = abs(framespectrum[:framelen/2])
-
-			# do the frequency warping and MFCC computation
-			melSpectrum = mfccMaker.warpSpectrum(magspec)
-			melCepstrum = mfccMaker.getMFCCs(melSpectrum,cn=True)
-			melCepstrum = melCepstrum[1:]   # exclude zeroth coefficient
-			melCepstrum = melCepstrum[:13] # limit to lower MFCCs
-
-			framefeatures = melCepstrum   # todo: include deltas? that can be your homework.
-
-			features.append(framefeatures)						
-		except RuntimeError:
-			break
-	sf.close()
-	ret = np.array(features)
-	if verbose:
-		print "file_to_features() produced array shape " + str(np.shape(ret))
-	return ret
+		sf.close()
+		ret = np.array(features)
+		return ret
 
 #######################################################################
+# If this file is invoked as a script, it carries out a simple runthrough
+# of training on some wavs, then testing (on the same ones, just for confirmation, not for eval)
 if __name__ == '__main__':
 	foldername = 'wavs'
 	if len(sys.argv) > 1:
@@ -158,13 +159,17 @@ if __name__ == '__main__':
 		for wavpath,label in sorted(trainingdata.iteritems()):
 			print " %s: \t %s" % (label, wavpath)
 
+	print "##################################################"
+	print "TRAINING"
 	model = Smacpy(foldername, trainingdata)
 
-	#################################
-	print "Inferred classifications:"
+	print "##################################################"
+	print "TESTING (nb on the same files as used for training - for true evaluation please train and test on independent data):"
+	ncorrect = 0
 	for wavpath,label in trainingdata.iteritems():
-		print " %s" % wavpath
-		print " true: %s" % label
 		result = model.classify(os.path.join(foldername, wavpath))
 		print " inferred: %s" % result
+		if result == label:
+			ncorrect += 1
+	print "Got %i correct out of %i" % (ncorrect, len(trainingdata))
 
