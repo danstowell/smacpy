@@ -4,12 +4,13 @@ smacpy - simple-minded audio classifier in python
 
 Copyright (c) 2012 Dan Stowell and Queen Mary University of London
 (incorporating code Copyright (c) 2009 Gyorgy Fazekas and Queen Mary University of London)
-for licence information see the file named COPYING.
+- for licence information see the file named COPYING.
 
 This is a classifier that you can train on a set of labelled audio files, and then it predicts a label for further audio files.
 It is designed with two main aims:
- (1) to provide a baseline against which to test more advanced audio classifiers;
- (2) to provide a simple code example of a classifier which people are free to build on.
+
+1. to provide a baseline against which to test more advanced audio classifiers;
+2. to provide a simple code example of a classifier which people are free to build on.
 
 It uses the very common workflow of taking audio, converting it frame-by-frame into MFCCs, and modelling the MFCC "bag of frames" with a GMM.
 
