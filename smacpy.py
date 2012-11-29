@@ -150,9 +150,9 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--trainpath',  default='wavs', help="Path to the WAV files used for training")
 	parser.add_argument('-T', '--testpath',   default='wavs', help="Path to the WAV files used for testing")
 	parser.add_argument('-c', '--charsplit',  default='_',   help="Character used to split filenames: anything BEFORE this character is the class")
-	parser.add_argument('-V', dest='lessverbose', action='store_true', help="Be less verbose")
+	parser.add_argument('-q', dest='quiet', action='store_true', help="Be less verbose, don't output much text during processing")
 	args = vars(parser.parse_args())
-	verbose = not args['lessverbose']
+	verbose = not args['quiet']
 
 	# Build up lists of the training and testing WAV files:
 	wavsfound = {'trainpath':{}, 'testpath':{}}
