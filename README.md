@@ -22,7 +22,7 @@ Requirements
     * scikits.audiolab
     * sklearn.mixture
 
-It has been tested on python 2.7 (on ubuntu 11.10 and 12.04).
+It has been tested on python 2.7 (on ubuntu 11.10 and 12.04). Not yet tested on python3 but it should be fine...
 
 
 Usage example 1: commandline

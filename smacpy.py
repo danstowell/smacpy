@@ -58,7 +58,7 @@ model.classify('wavs/testing/hubert01.wav')
 		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in trainingdata}
 
 		# Determine the normalisation stats, and remember them
-		allconcat = np.vstack(allfeatures.values())
+		allconcat = np.vstack(list(allfeatures.values()))
 		self.means = np.mean(allconcat, 0)
 		self.invstds = np.std(allconcat, 0)
 		for i,val in enumerate(self.invstds):
@@ -69,7 +69,7 @@ model.classify('wavs/testing/hubert01.wav')
 
 		# For each label, compile a normalised concatenated list of features
 		aggfeatures = {}
-		for wavpath, features in allfeatures.iteritems():
+		for wavpath, features in allfeatures.items():
 			label = trainingdata[wavpath]
 			normed = self.__normalise(features)
 			if label not in aggfeatures:
@@ -79,13 +79,13 @@ model.classify('wavs/testing/hubert01.wav')
 
 		# For each label's aggregated features, train a GMM and remember it
 		self.gmms = {}
-		for label, aggf in aggfeatures.iteritems():
+		for label, aggf in aggfeatures.items():
 			if verbose:
-				print "    Training a GMM for label %s, using data of shape %s" % (label, str(np.shape(aggf)))
+				print("    Training a GMM for label %s, using data of shape %s" % (label, str(np.shape(aggf))))
 			self.gmms[label] = GMM(n_components=10, cvtype='full')
 			self.gmms[label].fit(aggf)
 		if verbose:
-			print "  Trained %i classes from %i input files" % (len(self.gmms), len(trainingdata))
+			print("  Trained %i classes from %i input files" % (len(self.gmms), len(trainingdata)))
 
 	def __normalise(self, data):
 		"Normalises data using the mean and stdev of the training data - so that everything is on a common scale."
@@ -97,7 +97,7 @@ model.classify('wavs/testing/hubert01.wav')
 		# For each label GMM, find the overall log-likelihood and choose the strongest
 		bestlabel = ''
 		bestll = -9e99
-		for label, gmm in self.gmms.iteritems():
+		for label, gmm in self.gmms.items():
 			ll = gmm.eval(features)[0]
 			ll = np.sum(ll)
 			if ll > bestll:
@@ -107,7 +107,7 @@ model.classify('wavs/testing/hubert01.wav')
 
 	def file_to_features(self, wavpath):
 		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
-		if verbose: print "Reading %s" % wavpath
+		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
 		sf = Sndfile(wavpath, "r")
 		if sf.channels != 1:            raise ValueError("sound file has multiple channels (%i) - mono audio required." % sf.channels)
@@ -118,7 +118,7 @@ model.classify('wavs/testing/hubert01.wav')
 			try:
 				chunk = sf.read_frames(framelen, dtype=np.float32)
 				if len(chunk) != framelen:
-					print "Not read sufficient samples - returning"
+					print("Not read sufficient samples - returning")
 					break
 				framespectrum = np.fft.fft(window * chunk)
 				magspec = abs(framespectrum[:framelen/2])
@@ -163,23 +163,23 @@ if __name__ == '__main__':
 		if len(wavsfound[onepath])==0:
 			raise RuntimeError("Found no files using this pattern: %s" % pattern)
 		if verbose:
-			print "Class-labels and filenames to be used from %s:" % onepath
-			for wavpath,label in sorted(wavsfound[onepath].iteritems()):
-				print " %s: \t %s" % (label, wavpath)
+			print("Class-labels and filenames to be used from %s:" % onepath)
+			for wavpath,label in sorted(wavsfound[onepath].items()):
+				print(" %s: \t %s" % (label, wavpath))
 
-	print "##################################################"
-	print "TRAINING"
+	print("##################################################")
+	print("TRAINING")
 	model = Smacpy(args['trainpath'], wavsfound['trainpath'])
 
-	print "##################################################"
-	print "TESTING"
+	print("##################################################")
+	print("TESTING")
 	if args['trainpath'] == args['testpath']:
-		print " (nb testing on the same files as used for training - for true evaluation please train and test on independent data):"
+		print(" (nb testing on the same files as used for training - for true evaluation please train and test on independent data):")
 	ncorrect = 0
-	for wavpath,label in wavsfound['testpath'].iteritems():
+	for wavpath,label in wavsfound['testpath'].items():
 		result = model.classify(os.path.join(args['testpath'], wavpath))
-		print " inferred: %s" % result
+		print(" inferred: %s" % result)
 		if result == label:
 			ncorrect += 1
-	print "Got %i correct out of %i (trained on %i classes)" % (ncorrect, len(wavsfound['testpath']), len(model.gmms))
+	print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, len(wavsfound['testpath']), len(model.gmms)))
 

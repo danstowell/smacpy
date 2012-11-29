@@ -40,16 +40,16 @@ class melScaling(object):
 		if self.updated: return self.valid
 		self.updated = True
 		self.valid = False
-		print 'Updating parameters and recalculating filters: '
-		print 'Nyquist: ',self.NqHz
+		print('Updating parameters and recalculating filters: ')
+		print('Nyquist: ',self.NqHz)
 		
 		if self.maxHz > self.NqHz : 
 			raise Exception('Maximum frequency must be smaller than the Nyquist frequency')
 		
 		self.maxMel = 1000*log(1+self.maxHz/700.0)/log(1+1000.0/700.0)
 		self.minMel = 1000*log(1+self.minHz/700.0)/log(1+1000.0/700.0)
-		print 'minHz:%s\nmaxHz:%s\nminMel:%s\nmaxMel:%s\n' \
-		%(self.minHz,self.maxHz,self.minMel,self.maxMel)
+		print('minHz:%s\nmaxHz:%s\nminMel:%s\nmaxMel:%s\n' \
+		%(self.minHz,self.maxHz,self.minMel,self.maxMel))
 		self.filterMatrix = self.getFilterMatrix(self.inputSize,self.numBands)
 		self.DCTMatrix = self.getDCTMatrix(self.numBands)
 		self.filterIter = self.filterMatrix.__iter__()
@@ -61,7 +61,7 @@ class melScaling(object):
 		This function calculates two extra bands at the edges for
 		finding the starting and end point of the first and last 
 		actual filters.'''
-		centresMel = numpy.array(xrange(numBands+2)) * (self.maxMel-self.minMel)/(numBands+1) + self.minMel
+		centresMel = numpy.array(range(numBands+2)) * (self.maxMel-self.minMel)/(numBands+1) + self.minMel
 		centresBin = numpy.floor(0.5 + 700.0*inputSize*(exp(centresMel*log(1+1000.0/700.0)/1000.0)-1)/self.NqHz)
 		return numpy.array(centresBin,int)
 		
@@ -69,7 +69,7 @@ class melScaling(object):
 		'''Compose the Mel scaling matrix.'''
 		filterMatrix = numpy.zeros((numBands,inputSize))
 		self.filterCentres = self.getFilterCentres(inputSize,numBands)
-		for i in xrange(numBands) :
+		for i in range(numBands) :
 			start,centre,end = self.filterCentres[i:i+3]
 			self.setFilter(filterMatrix[i],start,centre,end)
 		return filterMatrix.transpose()
@@ -78,8 +78,8 @@ class melScaling(object):
 		'''Calculate a single Mel filter.'''
 		k1 = numpy.float32(filterCentre-filterStart)
 		k2 = numpy.float32(filterEnd-filterCentre)
-		up = (numpy.array(xrange(filterStart,filterCentre))-filterStart)/k1
-		dn = (filterEnd-numpy.array(xrange(filterCentre,filterEnd)))/k2
+		up = (numpy.array(range(filterStart,filterCentre))-filterStart)/k1
+		dn = (filterEnd-numpy.array(range(filterCentre,filterEnd)))/k2
 		filt[filterStart:filterCentre] = up
 		filt[filterCentre:filterEnd] = dn
 
@@ -90,7 +90,7 @@ class melScaling(object):
 	def getDCTMatrix(self,size):
 		'''Calculate the square DCT transform matrix. Results are 
 		equivalent to Matlab dctmtx(n) with 64 bit precision.'''
-		DCTmx = numpy.array(xrange(size),numpy.float64).repeat(size).reshape(size,size)
+		DCTmx = numpy.array(range(size),numpy.float64).repeat(size).reshape(size,size)
 		DCTmxT = numpy.pi * (DCTmx.transpose()+0.5) / size
 		DCTmxT = (1.0/sqrt( size / 2.0)) * cos(DCTmx * DCTmxT)
 		DCTmxT[0] = DCTmxT[0] * (sqrt(2.0)/2.0)
