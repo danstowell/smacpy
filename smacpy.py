@@ -160,6 +160,8 @@ if __name__ == '__main__':
 		pattern = os.path.join(args[onepath], '*.wav')
 		for wavpath in glob(pattern):
 			label = os.path.basename(wavpath).split(args['charsplit'])[0]
+			# a little hack to use first 4 chars as label:
+			# label = os.path.basename(wavpath)[:4]
 			shortwavpath = os.path.relpath(wavpath, args[onepath])
 			wavsfound[onepath][shortwavpath] = label
 		if len(wavsfound[onepath])==0:
