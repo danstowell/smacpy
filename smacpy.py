@@ -11,8 +11,8 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import os.path
-import sys
 import numpy as np
+import argparse
 from glob import glob
 from scikits.audiolab import Sndfile
 from scikits.audiolab import Format
@@ -142,34 +142,44 @@ model.classify('wavs/testing/hubert01.wav')
 # If this file is invoked as a script, it carries out a simple runthrough
 # of training on some wavs, then testing (on the same ones, just for confirmation, not for eval)
 if __name__ == '__main__':
-	foldername = 'wavs'
-	if len(sys.argv) > 1:
-		foldername = sys.argv[1]
 
-	trainingdata = {}
-	pattern = os.path.join(foldername, '*.wav')
-	for wavpath in glob(pattern):
-		label = os.path.basename(wavpath).split('_')[0]
-		shortwavpath = os.path.relpath(wavpath, foldername)
-		trainingdata[shortwavpath] = label
-	if len(trainingdata)==0:
-		raise RuntimeError("Found no files using this pattern: %s" % pattern)
-	if verbose:
-		print "Class-labels and filenames to be used in training:"
-		for wavpath,label in sorted(trainingdata.iteritems()):
-			print " %s: \t %s" % (label, wavpath)
+	# Handle the command-line arguments for where the train/test data comes from:
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-t', '--trainpath',  default='wavs', help="Path to the WAV files used for training")
+	parser.add_argument('-T', '--testpath',   default='wavs', help="Path to the WAV files used for testing")
+	parser.add_argument('-c', '--charsplit',  default='_',   help="Character used to split filenames: anything BEFORE this character is the class")
+	parser.add_argument('-V', dest='lessverbose', action='store_true', help="Be less verbose")
+	args = vars(parser.parse_args())
+	verbose = not args['lessverbose']
+
+	# Build up lists of the training and testing WAV files:
+	wavsfound = {'trainpath':{}, 'testpath':{}}
+	for onepath in ['trainpath', 'testpath']:
+		pattern = os.path.join(args[onepath], '*.wav')
+		for wavpath in glob(pattern):
+			label = os.path.basename(wavpath).split(args['charsplit'])[0]
+			shortwavpath = os.path.relpath(wavpath, args[onepath])
+			wavsfound[onepath][shortwavpath] = label
+		if len(wavsfound[onepath])==0:
+			raise RuntimeError("Found no files using this pattern: %s" % pattern)
+		if verbose:
+			print "Class-labels and filenames to be used from %s:" % onepath
+			for wavpath,label in sorted(wavsfound[onepath].iteritems()):
+				print " %s: \t %s" % (label, wavpath)
 
 	print "##################################################"
 	print "TRAINING"
-	model = Smacpy(foldername, trainingdata)
+	model = Smacpy(args['trainpath'], wavsfound['trainpath'])
 
 	print "##################################################"
-	print "TESTING (nb on the same files as used for training - for true evaluation please train and test on independent data):"
+	print "TESTING"
+	if args['trainpath'] == args['testpath']:
+		print " (nb testing on the same files as used for training - for true evaluation please train and test on independent data):"
 	ncorrect = 0
-	for wavpath,label in trainingdata.iteritems():
-		result = model.classify(os.path.join(foldername, wavpath))
+	for wavpath,label in wavsfound['testpath'].iteritems():
+		result = model.classify(os.path.join(args['testpath'], wavpath))
 		print " inferred: %s" % result
 		if result == label:
 			ncorrect += 1
-	print "Got %i correct out of %i" % (ncorrect, len(trainingdata))
+	print "Got %i correct out of %i (trained on %i classes)" % (ncorrect, len(wavsfound['testpath']), len(model.gmms))
 

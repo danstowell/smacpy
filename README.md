@@ -16,11 +16,13 @@ It uses the very common workflow of taking audio, converting it frame-by-frame i
 
 Requirements
 ------------
-* Python 2.x (has been tested in python 2.7)
+* Python 2.7 or later (it uses the 'argparse' module, not available earlier)
 * Python modules:
     * numpy
     * scikits.audiolab
     * sklearn.mixture
+
+It has been tested on python 2.7 (on ubuntu 11.10 and 12.04).
 
 
 Usage example 1: commandline
@@ -31,6 +33,11 @@ and the class label is the text BEFORE the underscore.
 It will train a model using the wavs, and then test it on the same wavs.
 This can be a useful test that the script is working;
 however, remember that for proper evaluation you must test using files independent from the training files.
+
+To train and test on different folders, you can run it like this:
+
+	python smacpy.py -t trainwavs -T testwavs
+
 
 Usage example 2: from your own code
 -------------
