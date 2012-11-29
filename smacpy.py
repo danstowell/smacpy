@@ -110,7 +110,7 @@ model.classify('wavs/testing/hubert01.wav')
 		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
 		sf = Sndfile(wavpath, "r")
-		if sf.channels != 1:            print(" Sound file has multiple channels (%i) - channels will be mixed to mono." % sf.channels)
+		if (sf.channels != 1) and verbose:            print(" Sound file has multiple channels (%i) - channels will be mixed to mono." % sf.channels)
 		if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
 		window = np.hamming(framelen)
 		features = []
@@ -182,7 +182,8 @@ if __name__ == '__main__':
 	ncorrect = 0
 	for wavpath,label in wavsfound['testpath'].items():
 		result = model.classify(os.path.join(args['testpath'], wavpath))
-		print(" inferred: %s" % result)
+		if verbose:
+			print(" inferred: %s" % result)
 		if result == label:
 			ncorrect += 1
 	print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, len(wavsfound['testpath']), len(model.gmms)))
