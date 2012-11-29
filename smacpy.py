@@ -110,7 +110,7 @@ model.classify('wavs/testing/hubert01.wav')
 		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
 		sf = Sndfile(wavpath, "r")
-		if sf.channels != 1:            raise ValueError("sound file has multiple channels (%i) - mono audio required." % sf.channels)
+		if sf.channels != 1:            print(" Sound file has multiple channels (%i) - channels will be mixed to mono." % sf.channels)
 		if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
 		window = np.hamming(framelen)
 		features = []
@@ -120,6 +120,8 @@ model.classify('wavs/testing/hubert01.wav')
 				if len(chunk) != framelen:
 					print("Not read sufficient samples - returning")
 					break
+				if sf.channels != 1:
+					chunk = np.mean(chunk, 1) # mixdown
 				framespectrum = np.fft.fft(window * chunk)
 				magspec = abs(framespectrum[:framelen/2])
 
