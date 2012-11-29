@@ -142,7 +142,7 @@ model.classify('wavs/testing/hubert01.wav')
 
 #######################################################################
 # If this file is invoked as a script, it carries out a simple runthrough
-# of training on some wavs, then testing (on the same ones, just for confirmation, not for eval)
+# of training on some wavs, then testing, with classnames being the start of the filenames
 if __name__ == '__main__':
 
 	# Handle the command-line arguments for where the train/test data comes from:
