@@ -30,9 +30,7 @@ Usage example 1: commandline
 If you invoke the script from the commandline (e.g. "python smacpy.py") it will assume there is a folder called "wavs"
 and inside that folder are multiple WAV files, each of which has an underscore in the filename,
 and the class label is the text BEFORE the underscore.
-It will train a model using the wavs, and then test it on the same wavs.
-This can be a useful test that the script is working;
-however, remember that for proper evaluation you must test using files independent from the training files.
+It will train a model using the wavs, and then test it on the same wavs (dividing the collection up so it can do a "crossvalidated" test).
 
 To train and test on different folders, you can run it like this:
 

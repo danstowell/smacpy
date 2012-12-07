@@ -200,6 +200,7 @@ if __name__ == '__main__':
 		totcorrect, tottotal = (0,0)
 		# Then we go through, each time training on all-but-one and testing on the one left out
 		for index in range(numfolds):
+			print("Fold %i of %i" % (index+1, numfolds))
 			chosenfold = folds[index]
 			alltherest = {}
 			for whichfold, otherfold in enumerate(folds):
