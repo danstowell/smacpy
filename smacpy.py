@@ -190,7 +190,7 @@ if __name__ == '__main__':
 	else:
 		# This runs "stratified leave-one-out crossvalidation": test multiple times by leaving one-of-each-class out and training on the rest.
 		# First we need to build a list of files grouped by each classlabel
-		labelsinuse = list(set(wavsfound['trainpath'].values()))
+		labelsinuse = sorted(list(set(wavsfound['trainpath'].values())))
 		grouped = {label:[] for label in labelsinuse}
 		for wavpath,label in wavsfound['trainpath'].items():
 			grouped[label].append(wavpath)
