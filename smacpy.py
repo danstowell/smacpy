@@ -198,6 +198,7 @@ if __name__ == '__main__':
 		# Each "fold" will be a collection of one item of each label
 		folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
 		totcorrect, tottotal = (0,0)
+		confmatrix = {label:{label2:0 for label2 in labelsinuse} for label in labelsinuse}
 		# Then we go through, each time training on all-but-one and testing on the one left out
 		for index in range(numfolds):
 			print("Fold %i of %i" % (index+1, numfolds))
@@ -206,8 +207,31 @@ if __name__ == '__main__':
 			for whichfold, otherfold in enumerate(folds):
 				if whichfold != index:
 					alltherest.update(otherfold)
-			ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold)
-			totcorrect += ncorrect
-			tottotal   += ntotal
+
+			# Here I've written out trainAndTest() and altered it so I can have a confusion matrix made at the end
+			model = Smacpy(args['trainpath'], alltherest)
+			for wavpath,label in chosenfold.items():
+				result = model.classify(os.path.join(args['trainpath'], wavpath))
+				if verbose: print(" inferred: %s" % result)
+				if result == label:
+					totcorrect += 1
+				confmatrix[label][result] += 1
+			tottotal += len(chosenfold)
+
 		print("Got %i correct out of %i (using stratified leave-one-out crossvalidation, %i folds)" % (totcorrect, tottotal, numfolds))
+
+		print("Confusion matrix:")
+		# Header row
+		print "truelabel\t",
+		for resultlabel in labelsinuse:
+			print resultlabel[:6] + "\t",
+		print ""
+		# Data rows
+		for truelabel in labelsinuse:
+			print truelabel[:9] + "\t",
+			for resultlabel in labelsinuse:
+				val = confmatrix[truelabel][resultlabel]
+				if val == 0: val = '-'   # for readability
+				print str(val) + "\t",
+			print ""
 
