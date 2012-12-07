@@ -103,7 +103,7 @@ class Smacpy:
 		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
 		sf = Sndfile(wavpath, "r")
-		if (sf.channels != 1) and verbose: print(" Sound file has multiple channels (%i) - channels will be mixed to mono." % sf.channels)
+		#if (sf.channels != 1) and verbose: print(" Sound file has multiple channels (%i) - channels will be mixed to mono." % sf.channels)
 		if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
 		window = np.hamming(framelen)
 		features = []
@@ -170,7 +170,7 @@ if __name__ == '__main__':
 	for onepath in ['trainpath', 'testpath']:
 		pattern = os.path.join(args[onepath], '*.wav')
 		for wavpath in glob(pattern):
-			if args['numchars'] > 0:
+			if args['numchars'] != 0:
 				label = os.path.basename(wavpath)[:args['numchars']]
 			else:
 				label = os.path.basename(wavpath).split(args['charsplit'])[0]
@@ -188,13 +188,25 @@ if __name__ == '__main__':
 		ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'])
 		print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, ntotal, nclasses))
 	else:
-		# "Leave-one-out-crossvalidation": leave one at a time out of the training set, and see how it is classified
+		# This runs "stratified leave-one-out crossvalidation": test multiple times by leaving one-of-each-class out and training on the rest.
+		# First we need to build a list of files grouped by each classlabel
+		labelsinuse = list(set(wavsfound['trainpath'].values()))
+		grouped = {label:[] for label in labelsinuse}
+		for wavpath,label in wavsfound['trainpath'].items():
+			grouped[label].append(wavpath)
+		numfolds = min(len(collection) for collection in grouped.values())
+		# Each "fold" will be a collection of one item of each label
+		folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
 		totcorrect, tottotal = (0,0)
-		for whichone in wavsfound['trainpath']:
-			chosenone  = {k:v for (k, v) in wavsfound['trainpath'].items() if k == whichone}
-			alltherest = {k:v for (k, v) in wavsfound['trainpath'].items() if k != whichone}
-			ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenone)
+		# Then we go through, each time training on all-but-one and testing on the one left out
+		for index in range(numfolds):
+			chosenfold = folds[index]
+			alltherest = {}
+			for whichfold, otherfold in enumerate(folds):
+				if whichfold != index:
+					alltherest.update(otherfold)
+			ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold)
 			totcorrect += ncorrect
 			tottotal   += ntotal
-		print("Got %i correct out of %i (leave-one-out crossvalidation)" % (totcorrect, tottotal))
+		print("Got %i correct out of %i (using stratified leave-one-out crossvalidation, %i folds)" % (totcorrect, tottotal, numfolds))
 
