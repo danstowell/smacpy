@@ -76,7 +76,7 @@ class Smacpy:
 		self.gmms = {}
 		for label, aggf in aggfeatures.items():
 			if verbose: print("    Training a GMM for label %s, using data of shape %s" % (label, str(np.shape(aggf))))
-			self.gmms[label] = GMM(n_components=10, cvtype='full')
+			self.gmms[label] = GMM(n_components=10) # , cvtype='full')
 			self.gmms[label].fit(aggf)
 		if verbose: print("  Trained %i classes from %i input files" % (len(self.gmms), len(trainingdata)))
 
