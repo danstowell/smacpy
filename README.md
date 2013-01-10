@@ -19,8 +19,8 @@ Requirements
 * Python 2.7 or later (it uses the 'argparse' module, not available earlier)
 * Python modules:
     * numpy
-    * scikits.audiolab
-    * sklearn.mixture
+    * [scikits.audiolab](http://pypi.python.org/pypi/scikits.audiolab)
+    * [sckikit-learn](http://scikit-learn.sourceforge.net/)
 
 It has been tested on python 2.7 (on ubuntu 11.10 and 12.04). Not yet tested on python3 but it should be fine...
 
