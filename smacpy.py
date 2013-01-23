@@ -168,9 +168,10 @@ if __name__ == '__main__':
 		elif len(row)>2:
 			raise ValueError("Row has more than one tab character in: ", row)
 
-	print("Training files to be used:")
-	for wavpath,label in sorted(trainlist.items()):
-		print(" %s: \t %s" % (label, wavpath))
+	if verbose:
+		print("Training files to be used:")
+		for wavpath,label in sorted(trainlist.items()):
+			print(" %s: \t %s" % (label, wavpath))
 
 	# Load the test list
 	testlist = []
@@ -179,17 +180,18 @@ if __name__ == '__main__':
 			testlist.append(row[0])
 		elif len(row)>1:
 			raise ValueError("Row has a tab character in - SHOULD NOT happen for testlist: ", row)
-	print("Testing files to be used:")
-	for item in testlist: print(item)
+	if verbose:
+		print("Testing files to be used:")
+		for item in testlist: print(item)
 
 	# OK so let's go
 	outlist = file(args['outlist'], 'wb')
-	print("TRAINING")
+	if verbose: print("TRAINING")
 	model = Smacpy('/', trainlist)
-	print("TESTING")
+	if verbose: print("TESTING")
 	for wavpath in testlist:
 		result = model.classify(wavpath)
 		outlist.write("%s\t%s\n" % (wavpath, result))
 	outlist.close()
-	print("Finished.")
+	if verbose: print("Finished.")
 
