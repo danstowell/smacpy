@@ -1,4 +1,5 @@
 *~
 *.pyc
 wavs
+zsmacpy_*.pickle
 

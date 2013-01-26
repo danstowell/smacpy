@@ -18,6 +18,8 @@ from scikits.audiolab import Sndfile
 from scikits.audiolab import Format
 from sklearn.mixture import GMM
 
+import cPickle as pickle
+
 from MFCC import melScaling
 
 #######################################################################
@@ -135,8 +137,15 @@ class Smacpy:
 #######################################################################
 def trainAndTest(trainpath, trainwavs, testpath, testwavs):
 	"Handy function for evaluating your code: trains a model, tests it on wavs of known class. Returns (numcorrect, numtotal, numclasses)."
-	print("TRAINING")
-	model = Smacpy(trainpath, trainwavs)
+
+	picklepath = "zsmacpy_%s.pickle" % hash(trainpath + ':'.join(sorted(trainwavs.keys())) + ':'.join(sorted(trainwavs.values())))
+	if os.path.isfile(picklepath):
+		print "Reloading cached model from %s" % picklepath
+		model = pickle.load(open(picklepath, 'rb'))
+	else:
+		print("TRAINING")
+		model = Smacpy(trainpath, trainwavs)
+		pickle.dump(model, open(picklepath, 'wb'), -1)
 	print("TESTING")
 	ncorrect = 0
 	for wavpath,label in testwavs.items():
