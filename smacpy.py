@@ -126,10 +126,19 @@ class Smacpy:
 
 				framefeatures = melCepstrum   # todo: include deltas? that can be your homework.
 
+				# Get signal power and prepend to framefeatures - for pcsubset
+				sigpow = ((window * chunk) ** 2).sum
+				framefeatures = (sigpow, framefeatures)  # note, sigpow is first entry - for easy sorting
+
 				features.append(framefeatures)
 			except RuntimeError:
 				break
 		sf.close()
+
+		# sort "features" by signal power, then drop it back to being just the mfccs - for pcsubset
+		features.sort()
+		features = [item[1] for item in features]
+
 		return np.array(features)
 
 #######################################################################
