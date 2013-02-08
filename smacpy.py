@@ -164,15 +164,19 @@ def trainAndTest(trainpath, trainwavs, testpath, testwavs, minpc, maxpc):
 #######################################################################
 # If this file is invoked as a script, it carries out a simple runthrough
 # of training on some wavs, then testing, with classnames being the start of the filenames
+# python smacpy.py -t wavs -T wavs -p 0,0.25,0.5,0.75,1
+# python smacpy.py -t ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -T ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -p 0,0.2,0.4,0.6,0.8,1 -n -6
 if __name__ == '__main__':
+
+	def string2floatlist(string): return [float(x) for x in string.split(",")]
 
 	# Handle the command-line arguments for where the train/test data comes from:
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-t', '--trainpath', default='wavs', help="Path to the WAV files used for training")
 	parser.add_argument('-T', '--testpath',                  help="Path to the WAV files used for testing")
 	parser.add_argument('-q', dest='quiet', action='store_true', help="Be less verbose, don't output much text during processing")
-	parser.add_argument('-p', '--minpc' ,  default=0.  ,    help="Minimum percentile amplitude to consider (0--1)", type=float)
-	parser.add_argument('-P', '--maxpc' ,  default=1.  ,    help="Maximum percentile amplitude to consider (0--1)", type=float)
+	parser.add_argument('-p', '--pcrange' ,  default=[0,0.5,1]  ,    help="Comma-separated list of percentile cutoffs to consider (0--1)", type=string2floatlist)
+	parser.add_argument('-o', '--outpath', default='pcresults.csv', help="Path to write pcsubset results to")
 	group = parser.add_mutually_exclusive_group()
 	group.add_argument('-c', '--charsplit',  default='_',    help="Character used to split filenames: anything BEFORE this character is the class")
 	group.add_argument('-n', '--numchars' ,  default=0  ,    help="Instead of splitting using 'charsplit', use this fixed number of characters from the start of the filename", type=int)
@@ -200,31 +204,45 @@ if __name__ == '__main__':
 			for wavpath,label in sorted(wavsfound[onepath].items()):
 				print(" %s: \t %s" % (label, wavpath))
 
-	if args['testpath'] != args['trainpath']:
-		# Separate train-and-test collections
-		ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], args['minpc'], args['maxpc'])
-		print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, ntotal, nclasses))
-	else:
-		# This runs "stratified leave-one-out crossvalidation": test multiple times by leaving one-of-each-class out and training on the rest.
-		# First we need to build a list of files grouped by each classlabel
-		labelsinuse = sorted(list(set(wavsfound['trainpath'].values())))
-		grouped = {label:[] for label in labelsinuse}
-		for wavpath,label in wavsfound['trainpath'].items():
-			grouped[label].append(wavpath)
-		numfolds = min(len(collection) for collection in grouped.values())
-		# Each "fold" will be a collection of one item of each label
-		folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
-		totcorrect, tottotal = (0,0)
-		# Then we go through, each time training on all-but-one and testing on the one left out
-		for index in range(numfolds):
-			print("Fold %i of %i" % (index+1, numfolds))
-			chosenfold = folds[index]
-			alltherest = {}
-			for whichfold, otherfold in enumerate(folds):
-				if whichfold != index:
-					alltherest.update(otherfold)
-			ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold, args['minpc'], args['maxpc'])
-			totcorrect += ncorrect
-			tottotal   += ntotal
-		print("Got %i correct out of %i (using stratified leave-one-out crossvalidation, %i folds)" % (totcorrect, tottotal, numfolds))
+
+	outfile = open(args['outpath'], 'wb', 1)
+	outfile.write("minpc,maxpc,acc,pcrange,accgain\n")
+
+	for whichminpc, minpc in enumerate(args['pcrange'][:-1]):
+		for maxpc in args['pcrange'][whichminpc+1:]:
+			print("-------------------------------------------")
+			print((minpc, maxpc))
+
+			if args['testpath'] != args['trainpath']:
+				# Separate train-and-test collections
+				totcorrect, tottotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], minpc, maxpc)
+				print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, ntotal, nclasses))
+			else:
+				# This runs "stratified leave-one-out crossvalidation": test multiple times by leaving one-of-each-class out and training on the rest.
+				# First we need to build a list of files grouped by each classlabel
+				labelsinuse = sorted(list(set(wavsfound['trainpath'].values())))
+				grouped = {label:[] for label in labelsinuse}
+				for wavpath,label in wavsfound['trainpath'].items():
+					grouped[label].append(wavpath)
+				numfolds = min(len(collection) for collection in grouped.values())
+				# Each "fold" will be a collection of one item of each label
+				folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
+				totcorrect, tottotal = (0,0)
+				# Then we go through, each time training on all-but-one and testing on the one left out
+				for index in range(numfolds):
+					print("Fold %i of %i" % (index+1, numfolds))
+					chosenfold = folds[index]
+					alltherest = {}
+					for whichfold, otherfold in enumerate(folds):
+						if whichfold != index:
+							alltherest.update(otherfold)
+					ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold, minpc, maxpc)
+					totcorrect += ncorrect
+					tottotal   += ntotal
+				print("Got %i correct out of %i (using stratified leave-one-out crossvalidation, %i folds)" % (totcorrect, tottotal, numfolds))
+
+			# here we write our stats line to file
+			accuracy = float(totcorrect)/tottotal
+			outfile.write("%g,%g,%g,%g,%g\n" % (minpc, maxpc, accuracy, maxpc-minpc, accuracy - (1./nclasses)))
+	outfile.close()
 
