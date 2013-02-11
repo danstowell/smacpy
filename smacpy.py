@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
 
 	outfile = open(args['outpath'], 'wb', 1)
-	outfile.write("minpc,maxpc,acc,pcrange,accgain\n")
+	outfile.write("minpc,maxpc,acc,pcrange,accgain,acc_ci\n")
 
 	for whichminpc, minpc in enumerate(args['pcrange'][:-1]):
 		for maxpc in args['pcrange'][whichminpc+1:]:
@@ -216,6 +216,7 @@ if __name__ == '__main__':
 			if args['testpath'] != args['trainpath']:
 				# Separate train-and-test collections
 				totcorrect, tottotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], minpc, maxpc)
+				accuracies = [float(totcorrect)/tottotal]
 				print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, ntotal, nclasses))
 			else:
 				# This runs "stratified leave-one-out crossvalidation": test multiple times by leaving one-of-each-class out and training on the rest.
@@ -228,6 +229,7 @@ if __name__ == '__main__':
 				# Each "fold" will be a collection of one item of each label
 				folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
 				totcorrect, tottotal = (0,0)
+				accuracies = []
 				# Then we go through, each time training on all-but-one and testing on the one left out
 				for index in range(numfolds):
 					print("Fold %i of %i" % (index+1, numfolds))
@@ -239,10 +241,15 @@ if __name__ == '__main__':
 					ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold, minpc, maxpc)
 					totcorrect += ncorrect
 					tottotal   += ntotal
+					accuracies.append(float(ncorrect)/ntotal)
+
 				print("Got %i correct out of %i (using stratified leave-one-out crossvalidation, %i folds)" % (totcorrect, tottotal, numfolds))
 
+			# calc mean and confidence interval of accuracy
+			accuracy = np.mean(accuracies)
+			acc_ci = (np.std(accuracies) / np.sqrt(len(accuracies))) * 1.96
+
 			# here we write our stats line to file
-			accuracy = float(totcorrect)/tottotal
-			outfile.write("%g,%g,%g,%g,%g\n" % (minpc, maxpc, accuracy, maxpc-minpc, accuracy - (1./nclasses)))
+			outfile.write("%g,%g,%g,%g,%g,%g\n" % (minpc, maxpc, accuracy, maxpc-minpc, accuracy - (1./nclasses), acc_ci))
 	outfile.close()
 

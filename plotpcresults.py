@@ -31,10 +31,11 @@ for row in data:
 # plot simple scatter of pcrange vs accuracy
 
 plt.figure()
-plt.plot(
+plt.errorbar(
 	[row['pcrange'] for row in data],
 	[row['acc'] for row in data],
-	'x'
+	[row['acc_ci'] for row in data],
+	fmt='x',
 	)
 plt.xlabel("Percentile range")
 plt.ylabel("Accuracy")
