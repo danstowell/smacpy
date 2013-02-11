@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--inpath', default='pcresults.csv', help="Path to the CSV file to load")
+parser.add_argument('-i', '--inpath', default='output/pcresults.csv', help="Path to the CSV file to load")
 args = vars(parser.parse_args())
 
 rdr = csv.DictReader(file(args['inpath'], 'rb'))

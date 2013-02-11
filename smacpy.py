@@ -176,7 +176,7 @@ if __name__ == '__main__':
 	parser.add_argument('-T', '--testpath',                  help="Path to the WAV files used for testing")
 	parser.add_argument('-q', dest='quiet', action='store_true', help="Be less verbose, don't output much text during processing")
 	parser.add_argument('-p', '--pcrange' ,  default=[0,0.5,1]  ,    help="Comma-separated list of percentile cutoffs to consider (0--1)", type=string2floatlist)
-	parser.add_argument('-o', '--outpath', default='pcresults.csv', help="Path to write pcsubset results to")
+	parser.add_argument('-o', '--outpath', default='output/pcresults.csv', help="Path to write pcsubset results to")
 	group = parser.add_mutually_exclusive_group()
 	group.add_argument('-c', '--charsplit',  default='_',    help="Character used to split filenames: anything BEFORE this character is the class")
 	group.add_argument('-n', '--numchars' ,  default=0  ,    help="Instead of splitting using 'charsplit', use this fixed number of characters from the start of the filename", type=int)
