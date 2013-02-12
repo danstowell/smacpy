@@ -176,7 +176,10 @@ def trainAndTest(trainpath, trainwavs, testpath, testwavs, minpc, maxpc, reducti
 # of training on some wavs, then testing, with classnames being the start of the filenames
 # python smacpy.py -t wavs -T wavs -p 0,0.25,0.5,0.75,1
 # python smacpy.py -t ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -T ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -p 0,0.2,0.4,0.6,0.8,1 -n -6
-# python smacpy.py -t ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -T ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -p 0,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1 -n -6 -m random
+#
+# python smacpy.py -t ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -T ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -p 0,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1 -n -6 -m random
+# python plotpcresults.py -i output/pcresults_random.csv --jitter=0
+#
 if __name__ == '__main__':
 
 	def string2floatlist(string): return [float(x) for x in string.split(",")]

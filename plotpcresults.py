@@ -11,6 +11,7 @@ import random
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--inpath', default='output/pcresults.csv', help="Path to the CSV file to load")
+parser.add_argument('-j', '--jitter', default=0.01, help="x-axis jiter to add", type=float)
 args = vars(parser.parse_args())
 
 rdr = csv.DictReader(file(args['inpath'], 'rb'))
@@ -33,16 +34,16 @@ for row in data:
 
 plt.figure()
 plt.errorbar(
-	[row['pcrange']+random.uniform(-0.01, 0.01) for row in data],
-	[row['acc'] for row in data],
-	[row['acc_ci'] for row in data],
+	[(row['pcrange']+random.uniform(-args['jitter'], args['jitter']))*100 for row in data],
+	[(row['acc'])*100 for row in data],
+	[(row['acc_ci'])*100 for row in data],
 	fmt='x',
 	)
-plt.xlabel("Percentile range")
-plt.ylabel("Accuracy")
+plt.xlabel("Proportion of frames used (%)")
+plt.ylabel("Accuracy (%)")
 plt.title(args['inpath'])
-plt.xlim(0,1.05)
-plt.ylim(0,1)
+plt.xlim(-5,105)
+plt.ylim(0,100)
 plt.savefig("%s.PvA.pdf" % args['inpath'], format='pdf')
 
 ############################################
