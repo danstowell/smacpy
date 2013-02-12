@@ -17,6 +17,7 @@ from glob import glob
 from scikits.audiolab import Sndfile
 from scikits.audiolab import Format
 from sklearn.mixture import GMM
+import random
 
 from MFCC import melScaling
 
@@ -42,7 +43,7 @@ class Smacpy:
 	Note for developers: this code should aim to be understandable, and not too long. Don't add too much functionality, or efficiency ;)
 	"""
 
-	def __init__(self, wavfolder, trainingdata, minpc, maxpc):
+	def __init__(self, wavfolder, trainingdata, minpc, maxpc, reductionmode):
 		"""Initialise the classifier and train it on some WAV files.
 		'wavfolder' is the base folder, to be prepended to all WAV paths.
 		'trainingdata' is a dictionary of wavpath:label pairs."""
@@ -52,7 +53,7 @@ class Smacpy:
 		self.mfccMaker = melScaling(int(fs), framelen/2, 40)
 		self.mfccMaker.update()
 
-		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath), minpc, maxpc) for wavpath in trainingdata}
+		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath), minpc, maxpc, reductionmode) for wavpath in trainingdata}
 
 		# Determine the normalisation stats, and remember them
 		allconcat = np.vstack(list(allfeatures.values()))
@@ -86,9 +87,9 @@ class Smacpy:
 		"Normalises data using the mean and stdev of the training data - so that everything is on a common scale."
 		return (data - self.means) * self.invstds
 
-	def classify(self, wavpath, minpc, maxpc):
+	def classify(self, wavpath, minpc, maxpc, reductionmode):
 		"Specify the path to an audio file, and this returns the max-likelihood class, as a string label."
-		features = self.__normalise(self.file_to_features(wavpath, minpc, maxpc))
+		features = self.__normalise(self.file_to_features(wavpath, minpc, maxpc, reductionmode))
 		# For each label GMM, find the overall log-likelihood and choose the strongest
 		bestlabel = ''
 		bestll = -9e99
@@ -100,7 +101,7 @@ class Smacpy:
 				bestlabel = label
 		return bestlabel
 
-	def file_to_features(self, wavpath, minpc, maxpc):
+	def file_to_features(self, wavpath, minpc, maxpc, reductionmode):
 		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
 		if minpc==None: minpc = 0.
 		if maxpc==None: maxpc = 1.
@@ -139,23 +140,32 @@ class Smacpy:
 				break
 		sf.close()
 
-		# sort "features" by signal power, then drop it back to being just the mfccs, then trim to percentiles - for pcsubset
-		features.sort()
-		features = [item[1] for item in features]
 		minpc_int = int(max(0.,minpc)*len(features))
 		maxpc_int = int(min(1.,maxpc)*len(features))
-		features = features[minpc_int:maxpc_int]
+		if reductionmode=='random':    # downsample irregularly
+			features = [item[1] for item in features]
+			random.shuffle(features)
+			features = features[:maxpc_int]
+		elif reductionmode=='regular': # downsample regularly
+			features = [item[1] for item in features]
+			hopsize = int(np.round(1./maxpc))
+			features = features[::hopsize]
+		else:                          # power percentiles
+			# sort "features" by signal power, then drop it back to being just the mfccs, then trim to percentiles - for pcsubset
+			features.sort()
+			features = [item[1] for item in features]
+			features = features[minpc_int:maxpc_int]
 		return np.array(features)
 
 #######################################################################
-def trainAndTest(trainpath, trainwavs, testpath, testwavs, minpc, maxpc):
+def trainAndTest(trainpath, trainwavs, testpath, testwavs, minpc, maxpc, reductionmode):
 	"Handy function for evaluating your code: trains a model, tests it on wavs of known class. Returns (numcorrect, numtotal, numclasses)."
 	print("TRAINING")
-	model = Smacpy(trainpath, trainwavs, minpc, maxpc)
+	model = Smacpy(trainpath, trainwavs, minpc, maxpc, reductionmode)
 	print("TESTING")
 	ncorrect = 0
 	for wavpath,label in testwavs.items():
-		result = model.classify(os.path.join(testpath, wavpath), minpc, maxpc)
+		result = model.classify(os.path.join(testpath, wavpath), minpc, maxpc, reductionmode)
 		if verbose: print(" inferred: %s" % result)
 		if result == label:
 			ncorrect += 1
@@ -166,6 +176,7 @@ def trainAndTest(trainpath, trainwavs, testpath, testwavs, minpc, maxpc):
 # of training on some wavs, then testing, with classnames being the start of the filenames
 # python smacpy.py -t wavs -T wavs -p 0,0.25,0.5,0.75,1
 # python smacpy.py -t ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -T ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -p 0,0.2,0.4,0.6,0.8,1 -n -6
+# python smacpy.py -t ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -T ~/aasp_temp/scenes_FROMRDR/scenes_stereo/scenes_stereo/ -p 0,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1 -n -6 -m random
 if __name__ == '__main__':
 
 	def string2floatlist(string): return [float(x) for x in string.split(",")]
@@ -176,7 +187,8 @@ if __name__ == '__main__':
 	parser.add_argument('-T', '--testpath',                  help="Path to the WAV files used for testing")
 	parser.add_argument('-q', dest='quiet', action='store_true', help="Be less verbose, don't output much text during processing")
 	parser.add_argument('-p', '--pcrange' ,  default=[0,0.5,1]  ,    help="Comma-separated list of percentile cutoffs to consider (0--1)", type=string2floatlist)
-	parser.add_argument('-o', '--outpath', default='output/pcresults.csv', help="Path to write pcsubset results to")
+	parser.add_argument('-m', '--reductionmode', default='percentile', help="Data reduction mode: 'percentile', 'random', 'regular' subsampling of frames")
+	parser.add_argument('-o', '--outpath', default=None, help="Path to write pcsubset results to")
 	group = parser.add_mutually_exclusive_group()
 	group.add_argument('-c', '--charsplit',  default='_',    help="Character used to split filenames: anything BEFORE this character is the class")
 	group.add_argument('-n', '--numchars' ,  default=0  ,    help="Instead of splitting using 'charsplit', use this fixed number of characters from the start of the filename", type=int)
@@ -185,6 +197,11 @@ if __name__ == '__main__':
 
 	if args['testpath']==None:
 		args['testpath'] = args['trainpath']
+	if args['outpath']==None:
+		if args['reductionmode']=='percentile':
+			args['outpath'] = "output/pcresults.csv"
+		else:
+			args['outpath'] = "output/pcresults_%s.csv" % args['reductionmode']
 
 	# Build up lists of the training and testing WAV files:
 	wavsfound = {'trainpath':{}, 'testpath':{}}
@@ -208,14 +225,19 @@ if __name__ == '__main__':
 	outfile = open(args['outpath'], 'wb', 1)
 	outfile.write("minpc,maxpc,acc,pcrange,accgain,acc_ci\n")
 
-	for whichminpc, minpc in enumerate(args['pcrange'][:-1]):
+	if args['reductionmode'] in ['random', 'regular']: # minpc not really used
+		minpcrange = [0]
+	else:
+		minpcrange = args['pcrange'][:-1]
+
+	for whichminpc, minpc in enumerate(minpcrange):
 		for maxpc in args['pcrange'][whichminpc+1:]:
 			print("-------------------------------------------")
 			print((minpc, maxpc))
 
 			if args['testpath'] != args['trainpath']:
 				# Separate train-and-test collections
-				totcorrect, tottotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], minpc, maxpc)
+				totcorrect, tottotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], minpc, maxpc, args['reductionmode'])
 				accuracies = [float(totcorrect)/tottotal]
 				print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, ntotal, nclasses))
 			else:
@@ -238,7 +260,7 @@ if __name__ == '__main__':
 					for whichfold, otherfold in enumerate(folds):
 						if whichfold != index:
 							alltherest.update(otherfold)
-					ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold, minpc, maxpc)
+					ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold, minpc, maxpc, args['reductionmode'])
 					totcorrect += ncorrect
 					tottotal   += ntotal
 					accuracies.append(float(ncorrect)/ntotal)
