@@ -7,6 +7,7 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import random
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--inpath', default='output/pcresults.csv', help="Path to the CSV file to load")
@@ -32,7 +33,7 @@ for row in data:
 
 plt.figure()
 plt.errorbar(
-	[row['pcrange'] for row in data],
+	[row['pcrange']+random.uniform(-0.01, 0.01) for row in data],
 	[row['acc'] for row in data],
 	[row['acc_ci'] for row in data],
 	fmt='x',
@@ -40,7 +41,7 @@ plt.errorbar(
 plt.xlabel("Percentile range")
 plt.ylabel("Accuracy")
 plt.title(args['inpath'])
-plt.xlim(0,1)
+plt.xlim(0,1.05)
 plt.ylim(0,1)
 plt.savefig("%s.PvA.pdf" % args['inpath'], format='pdf')
 
