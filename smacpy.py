@@ -188,8 +188,8 @@ if __name__ == '__main__':
 	confmatrix = {label:{label2:0 for label2 in labelsinuse} for label in labelsinuse}
 	if args['testpath'] != args['trainpath']:
 		# Separate train-and-test collections
-		ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], confmatrix)
-		print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, ntotal, nclasses))
+		totcorrect, tottotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], confmatrix)
+		accuracies = [float(totcorrect)/tottotal]
 	else:
 		# This runs "stratified leave-one-out crossvalidation": test multiple times by leaving one-of-each-class out and training on the rest.
 		# First we need to build a list of files grouped by each classlabel
@@ -200,6 +200,7 @@ if __name__ == '__main__':
 		# Each "fold" will be a collection of one item of each label
 		folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
 		totcorrect, tottotal = (0,0)
+		accuracies = []
 		# Then we go through, each time training on all-but-one and testing on the one left out
 		for index in range(numfolds):
 			print("Fold %i of %i" % (index+1, numfolds))
@@ -211,21 +212,28 @@ if __name__ == '__main__':
 			ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold, confmatrix)
 			totcorrect += ncorrect
 			tottotal   += ntotal
+			accuracies.append(float(ncorrect)/ntotal)
 
-		print("Got %i correct out of %i (using stratified leave-one-out crossvalidation, %i folds)" % (totcorrect, tottotal, numfolds))
+	# calc mean and confidence interval of accuracy
+	accuracy = np.mean(accuracies)
+	acc_ci = (np.std(accuracies) / np.sqrt(len(accuracies))) * 1.96
 
-		print("Confusion matrix:")
-		# Header row
-		print "truelabel\t",
+	print("Accuracy is %g%% +- %g%% (%i correct out of %i, %i classes)" % (accuracy * 100, acc_ci * 100, totcorrect, tottotal, nclasses))
+	if len(accuracies)>1:
+		print("    (using stratified leave-one-out crossvalidation, %i folds)" % (numfolds))
+
+	print("Confusion matrix:")
+	# Header row
+	print "truelabel\t",
+	for resultlabel in labelsinuse:
+		print resultlabel[:6] + "\t",
+	print ""
+	# Data rows
+	for truelabel in labelsinuse:
+		print truelabel[:9] + "\t",
 		for resultlabel in labelsinuse:
-			print resultlabel[:6] + "\t",
+			val = confmatrix[truelabel][resultlabel]
+			if val == 0: val = '-'   # for readability
+			print str(val) + "\t",
 		print ""
-		# Data rows
-		for truelabel in labelsinuse:
-			print truelabel[:9] + "\t",
-			for resultlabel in labelsinuse:
-				val = confmatrix[truelabel][resultlabel]
-				if val == 0: val = '-'   # for readability
-				print str(val) + "\t",
-			print ""
 
