@@ -52,7 +52,6 @@ class melScaling(object):
 		%(self.minHz,self.maxHz,self.minMel,self.maxMel))
 		self.filterMatrix = self.getFilterMatrix(self.inputSize,self.numBands)
 		self.DCTMatrix = self.getDCTMatrix(self.numBands)
-		self.filterIter = self.filterMatrix.__iter__()
 		self.valid = True
 		return self.valid
 				

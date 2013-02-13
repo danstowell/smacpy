@@ -102,7 +102,7 @@ class Smacpy:
 	def file_to_features(self, wavpath):
 		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
 		if verbose: print("Reading %s" % wavpath)
-		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
+		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % wavpath)
 		sf = Sndfile(wavpath, "r")
 		#if (sf.channels != 1) and verbose: print(" Sound file has multiple channels (%i) - channels will be mixed to mono." % sf.channels)
 		if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
