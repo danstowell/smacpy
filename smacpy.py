@@ -133,7 +133,7 @@ class Smacpy:
 		return np.array(features)
 
 #######################################################################
-def trainAndTest(trainpath, trainwavs, testpath, testwavs):
+def trainAndTest(trainpath, trainwavs, testpath, testwavs, confmatrix):
 	"Handy function for evaluating your code: trains a model, tests it on wavs of known class. Returns (numcorrect, numtotal, numclasses)."
 	print("TRAINING")
 	model = Smacpy(trainpath, trainwavs)
@@ -144,6 +144,7 @@ def trainAndTest(trainpath, trainwavs, testpath, testwavs):
 		if verbose: print(" inferred: %s" % result)
 		if result == label:
 			ncorrect += 1
+		confmatrix[label][result] += 1   # NB confusion matrix updated IN-PLACE
 	return (ncorrect, len(testwavs), len(model.gmms))
 
 #######################################################################
@@ -183,14 +184,15 @@ if __name__ == '__main__':
 			for wavpath,label in sorted(wavsfound[onepath].items()):
 				print(" %s: \t %s" % (label, wavpath))
 
+	labelsinuse = sorted(list(set(wavsfound['trainpath'].values())))
+	confmatrix = {label:{label2:0 for label2 in labelsinuse} for label in labelsinuse}
 	if args['testpath'] != args['trainpath']:
 		# Separate train-and-test collections
-		ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'])
+		ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], wavsfound['trainpath'], args['testpath'], wavsfound['testpath'], confmatrix)
 		print("Got %i correct out of %i (trained on %i classes)" % (ncorrect, ntotal, nclasses))
 	else:
 		# This runs "stratified leave-one-out crossvalidation": test multiple times by leaving one-of-each-class out and training on the rest.
 		# First we need to build a list of files grouped by each classlabel
-		labelsinuse = sorted(list(set(wavsfound['trainpath'].values())))
 		grouped = {label:[] for label in labelsinuse}
 		for wavpath,label in wavsfound['trainpath'].items():
 			grouped[label].append(wavpath)
@@ -198,7 +200,6 @@ if __name__ == '__main__':
 		# Each "fold" will be a collection of one item of each label
 		folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
 		totcorrect, tottotal = (0,0)
-		confmatrix = {label:{label2:0 for label2 in labelsinuse} for label in labelsinuse}
 		# Then we go through, each time training on all-but-one and testing on the one left out
 		for index in range(numfolds):
 			print("Fold %i of %i" % (index+1, numfolds))
@@ -207,16 +208,9 @@ if __name__ == '__main__':
 			for whichfold, otherfold in enumerate(folds):
 				if whichfold != index:
 					alltherest.update(otherfold)
-
-			# Here I've written out trainAndTest() and altered it so I can have a confusion matrix made at the end
-			model = Smacpy(args['trainpath'], alltherest)
-			for wavpath,label in chosenfold.items():
-				result = model.classify(os.path.join(args['trainpath'], wavpath))
-				if verbose: print(" inferred: %s" % result)
-				if result == label:
-					totcorrect += 1
-				confmatrix[label][result] += 1
-			tottotal += len(chosenfold)
+			ncorrect, ntotal, nclasses = trainAndTest(args['trainpath'], alltherest, args['trainpath'], chosenfold, confmatrix)
+			totcorrect += ncorrect
+			tottotal   += ntotal
 
 		print("Got %i correct out of %i (using stratified leave-one-out crossvalidation, %i folds)" % (totcorrect, tottotal, numfolds))
 
