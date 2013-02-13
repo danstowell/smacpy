@@ -98,7 +98,7 @@ class Smacpy:
 				bestlabel = label
 		return bestlabel
 
-	def file_to_features(self, wavpath):
+	def file_to_features(self, wavpath, subsample=0.05):
 		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
 		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % path)
@@ -107,12 +107,19 @@ class Smacpy:
 		if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
 		window = np.hamming(framelen)
 		features = []
+		modulo = int(1./subsample)
+		framecounter = 0
 		while(True):
 			try:
 				chunk = sf.read_frames(framelen, dtype=np.float32)
 				if len(chunk) != framelen:
 					print("Not read sufficient samples - returning")
 					break
+				framecounter += 1
+				if framecounter == modulo:
+					framecounter = 0
+				else:
+					continue # SKIP the majority of frames; read them in but don't bother with FFT etc
 				if sf.channels != 1:
 					chunk = np.mean(chunk, 1) # mixdown
 				framespectrum = np.fft.fft(window * chunk)
