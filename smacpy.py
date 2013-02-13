@@ -187,7 +187,7 @@ if __name__ == '__main__':
 	# OK so let's go
 	outlist = file(args['outlist'], 'wb')
 	if verbose: print("TRAINING")
-	model = Smacpy('/', trainlist)
+	model = Smacpy('', trainlist)
 	if verbose: print("TESTING")
 	for wavpath in testlist:
 		result = model.classify(wavpath)
