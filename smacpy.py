@@ -61,7 +61,7 @@ class Smacpy:
 		if picklepath and os.path.exists(picklepath):
 			self.load_cached_features(picklepath)
 
-		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in trainingdata}
+		allfeatures = {wavpath:self.file_to_features(wavfolder, wavpath) for wavpath in trainingdata}
 
 		# Determine the normalisation stats, and remember them
 		allconcat = np.vstack(list(allfeatures.values()))
@@ -96,16 +96,16 @@ class Smacpy:
 		return (data - self.means) * self.invstds
 
 	def precalc_features(self, wavfolder, wavpaths, picklepath):
-		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in wavpaths}
+		allfeatures = {wavpath:self.file_to_features(wavfolder, wavpath) for wavpath in wavpaths}
 		pickle.dump(allfeatures, open(picklepath, 'wb'), -1)
 		if verbose: print("Pre-calculated features for %i files, stored in %s" % (len(wavpaths), picklepath))
 
 	def load_cached_features(self, picklepath):
 		self.cachedfeatures = pickle.load(open(picklepath, 'rb'))
 
-	def classify(self, wavpath):
+	def classify(self, wavfolder, wavpath):
 		"Specify the path to an audio file, and this returns the max-likelihood class, as a string label."
-		features = self.__normalise(self.file_to_features(wavpath))
+		features = self.__normalise(self.file_to_features(wavfolder, wavpath))
 		# For each label GMM, find the overall log-likelihood and choose the strongest
 		bestlabel = ''
 		bestll = -9e99
@@ -117,11 +117,12 @@ class Smacpy:
 				bestlabel = label
 		return bestlabel
 
-	def file_to_features(self, wavpath):
+	def file_to_features(self, wavfolder, wavpath):
 		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
 		if self.cachedfeatures:
 			if verbose: print("Using cached features for %s" % wavpath)
 			return self.cachedfeatures[wavpath]
+		wavpath = os.path.join(wavfolder, wavpath)
 		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % wavpath)
 		sf = Sndfile(wavpath, "r")
@@ -162,7 +163,7 @@ def trainAndTest(trainpath, trainwavs, testpath, testwavs, picklepath):
 	print("TESTING")
 	ncorrect = 0
 	for wavpath,label in testwavs.items():
-		result = model.classify(os.path.join(testpath, wavpath))
+		result = model.classify(testpath, wavpath)
 		if verbose: print(" inferred: %s" % result)
 		if result == label:
 			ncorrect += 1
