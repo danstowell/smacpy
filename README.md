@@ -5,6 +5,7 @@ smacpy - simple-minded audio classifier in python
 Copyright (c) 2012 Dan Stowell and Queen Mary University of London
 (incorporating code Copyright (c) 2009 Gyorgy Fazekas and Queen Mary University of London)
 - for licence information see the file named COPYING.
+https://code.soundsoftware.ac.uk/projects/smacpy
 
 This is a classifier that you can train on a set of labelled audio files, and then it predicts a label for further audio files.
 It is designed with two main aims:
@@ -25,23 +26,25 @@ Requirements
 It has been tested on python 2.7 (on ubuntu 11.10 and 12.04). Not yet tested on python3 but it should be fine...
 
 
-Usage example 1: commandline
--------------
-If you invoke the script from the commandline (e.g. "python smacpy.py") it will assume there is a folder called "wavs"
-and inside that folder are multiple WAV files, each of which has an underscore in the filename,
-and the class label is the text BEFORE the underscore.
-It will train a model using the wavs, and then test it on the same wavs (dividing the collection up so it can do a "crossvalidated" test).
+Usage
+-----
+This branched version of the code takes arguments and file formats as required by MIREX classification task:
 
-To train and test on different folders, you can run it like this:
-
-	python smacpy.py -t trainwavs -T testwavs
+	python smacpy.py --trainlist trainlist.example.txt --testlist testlist.example.txt --outlist output.txt
 
 
-Usage example 2: from your own code
--------------
-In this hypothetical example we train on four audio files, labelled as either 'usa' or 'uk', and then test on a separate audio file of someone called hubert:
 
-	from smacpy import Smacpy
-	model = Smacpy("wavs/training", {'karen01.wav':'usa', 'john01.wav':'uk', 'steve02.wav':'usa', 'joe03.wav':'uk'})
-	model.classify('wavs/testing/hubert01.wav')
+Runtime
+-------
+It's simple and should be fast. On my laptop it took 5 minutes to process all the audio in our D-CASE challenge.
+
+It only uses one core.
+
+Nothing is written to disk except the answers.
+
+
+
+
+
+
 
