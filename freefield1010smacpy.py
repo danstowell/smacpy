@@ -13,6 +13,7 @@ import json
 # user settings:
 ffpath = '/home/dan/freefield1010_v02'
 outpath = 'output'
+picklepath = 'ff1010.pickle'
 numfolds = 10
 tagstoclassify = [u'voice', u'city'  , u"nature", u"birdsong", u"water", u"train", u"people"]
 doclassif = True   # just so you can disable the heavy bit if needed
@@ -22,6 +23,7 @@ doclassif = True   # just so you can disable the heavy bit if needed
 # glob for the wavs, loading them into per-chunk subsections
 data = [[] for _ in range(numfolds)]
 numtotal = 0
+precalcwavlist = []
 for globbed in iglob("%s/*/*.wav" % ffpath):
 	relpath = os.path.relpath(globbed, ffpath)
 	globbed = relpath.split("/")
@@ -35,9 +37,18 @@ for globbed in iglob("%s/*/*.wav" % ffpath):
 	item = {'itemid':itemid, 'whichfold':whichfold, 'tagpresent':{}, 'jsondata':jsondata, 'relpath':relpath}
 	#print(item)
 	data[whichfold].append(item)
+	precalcwavlist.append(relpath)
 	numtotal += 1
 print "Loaded info about %i items" % numtotal
 
+# feature precalc:
+if not os.path.exists(picklepath):
+	print("FEATURE PRECALC")
+	precalcwavlist.sort()
+	smaccer = Smacpy(ffpath, None, None)
+	smaccer.precalc_features(ffpath, precalcwavlist, picklepath)
+
+# now the classification experiments
 csvout = open("%s/freefield1010smacpy.csv" % outpath, 'w', 1)
 csvout.write(','.join(['tag','fold','tp','fp','tn','fn','acc']) + '\n')
 for curtag in tagstoclassify:
@@ -67,13 +78,13 @@ for curtag in tagstoclassify:
 					trainingset[item['relpath']] = item['tagpresent'][curtag]
 
 		if doclassif:
-			model = Smacpy(ffpath, trainingset)
+			model = Smacpy(ffpath, trainingset, picklepath)
 			numtp = 0
 			numfp = 0
 			numtn = 0
 			numfn = 0
 			for itempath, gt in testingset.items():
-				decision = model.classify(os.path.join(ffpath, itempath))
+				decision = model.classify(ffpath, itempath)
 				if gt:
 					if decision:
 						numtp += 1
