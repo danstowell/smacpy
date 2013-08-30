@@ -18,6 +18,8 @@ from scikits.audiolab import Sndfile
 from scikits.audiolab import Format
 from sklearn.mixture import GMM
 import csv
+import cPickle as pickle
+import sys
 
 from MFCC import melScaling
 
@@ -43,13 +45,21 @@ class Smacpy:
 	Note for developers: this code should aim to be understandable, and not too long. Don't add too much functionality, or efficiency ;)
 	"""
 
-	def __init__(self, wavfolder, trainingdata):
+	def __init__(self, wavfolder, trainingdata, picklepath):
 		"""Initialise the classifier and train it on some WAV files.
 		'wavfolder' is the base folder, to be prepended to all WAV paths.
 		'trainingdata' is a dictionary of wavpath:label pairs."""
 
 		self.mfccMaker = melScaling(int(fs), framelen/2, 40)
 		self.mfccMaker.update()
+
+		self.cachedfeatures = None
+
+		if not trainingdata:
+			return   # bit hacky - initialise object but do no analysis - intended for the special precalc mode
+
+		if picklepath and os.path.exists(picklepath):
+			self.load_cached_features(picklepath)
 
 		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in trainingdata}
 
@@ -85,6 +95,14 @@ class Smacpy:
 		"Normalises data using the mean and stdev of the training data - so that everything is on a common scale."
 		return (data - self.means) * self.invstds
 
+	def precalc_features(self, wavfolder, wavpaths, picklepath):
+		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in wavpaths}
+		pickle.dump(allfeatures, open(picklepath, 'wb'), -1)
+		if verbose: print("Pre-calculated features for %i files, stored in %s" % (len(wavpaths), picklepath))
+
+	def load_cached_features(self, picklepath):
+		self.cachedfeatures = pickle.load(open(picklepath, 'rb'))
+
 	def classify(self, wavpath):
 		"Specify the path to an audio file, and this returns the max-likelihood class, as a string label."
 		features = self.__normalise(self.file_to_features(wavpath))
@@ -101,6 +119,9 @@ class Smacpy:
 
 	def file_to_features(self, wavpath):
 		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
+		if self.cachedfeatures:
+			if verbose: print("Using cached features for %s" % wavpath)
+			return self.cachedfeatures[wavpath]
 		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % wavpath)
 		sf = Sndfile(wavpath, "r")
@@ -134,10 +155,10 @@ class Smacpy:
 		return np.array(features)
 
 #######################################################################
-def trainAndTest(trainpath, trainwavs, testpath, testwavs):
+def trainAndTest(trainpath, trainwavs, testpath, testwavs, picklepath):
 	"Handy function for evaluating your code: trains a model, tests it on wavs of known class. Returns (numcorrect, numtotal, numclasses)."
 	print("TRAINING")
-	model = Smacpy(trainpath, trainwavs)
+	model = Smacpy(trainpath, trainwavs, picklepath)
 	print("TESTING")
 	ncorrect = 0
 	for wavpath,label in testwavs.items():
@@ -156,9 +177,16 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--trainlist', default='NOT_SPECIFIED', help="Path to the file listing WAV files used for training")
 	parser.add_argument('-T', '--testlist',  default='NOT_SPECIFIED', help="Path to the file listing WAV files used for testing")
 	parser.add_argument('-o', '--outlist',   default='output.txt',    help="Path to write results to")
+	parser.add_argument('-p', '--picklepath',                help="Path to the pre-calculated features. If specified and not existing yet, it forces this invocation to be purely feature-precalc, applied to the files in the --trainpath folder. If specified and exists, the data is unpickled.")
 	parser.add_argument('-q', dest='quiet', action='store_true', help="Be less verbose, don't output much text during processing")
 	args = vars(parser.parse_args())
 	verbose = not args['quiet']
+
+	if args['picklepath'] and not os.path.exists(args['picklepath']):
+		print("SPECIAL PRECALCULATION MODE. No inference will be done, but features will be pre-calculated.")
+		smaccer = Smacpy(args['trainpath'], None, None) # bit hacky - set second arg to None to initialise an object without analysing anything
+		smaccer.precalc_features(args['trainpath'], sorted(wavsfound['trainpath'].keys()), args['picklepath'])
+		sys.exit(0)
 
 	# Load the training list as a dictionary of "filename->classification" data
 	trainlist = {}
