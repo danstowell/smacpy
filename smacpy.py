@@ -20,6 +20,7 @@ from sklearn.mixture import GMM
 import csv
 import cPickle as pickle
 import sys
+import random
 
 from MFCC import melScaling
 
@@ -45,10 +46,12 @@ class Smacpy:
 	Note for developers: this code should aim to be understandable, and not too long. Don't add too much functionality, or efficiency ;)
 	"""
 
-	def __init__(self, wavfolder, trainingdata, picklepath):
+	def __init__(self, wavfolder, trainingdata, picklepath, trainsubsample=None):
 		"""Initialise the classifier and train it on some WAV files.
 		'wavfolder' is the base folder, to be prepended to all WAV paths.
-		'trainingdata' is a dictionary of wavpath:label pairs."""
+		'trainingdata' is a dictionary of wavpath:label pairs.
+		'picklepath' is a path to where the precalced features are to be loaded from.
+		'trainsubsample' is.a ratio by which to randomly shrink the data used for training (e.g. 0.25 randomly selects one-quarter of the frames)."""
 
 		self.mfccMaker = melScaling(int(fs), framelen/2, 40)
 		self.mfccMaker.update()
@@ -78,6 +81,9 @@ class Smacpy:
 		for wavpath, features in allfeatures.items():
 			label = trainingdata[wavpath]
 			normed = self.__normalise(features)
+			if trainsubsample:
+				random.shuffle(normed)
+				normed = normed[:int(len(normed)*trainsubsample)]
 			if label not in aggfeatures:
 				aggfeatures[label] = normed
 			else:
