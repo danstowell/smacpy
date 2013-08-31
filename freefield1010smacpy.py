@@ -17,6 +17,7 @@ picklepath = 'ff1010.pickle'
 numfolds = 10
 tagstoclassify = [u'voice', u'city'  , u"nature", u"birdsong", u"water", u"train", u"people"]
 doclassif = True   # just so you can disable the heavy bit if needed
+trainsubsample = 0.2
 
 ################################
 
@@ -78,7 +79,7 @@ for curtag in tagstoclassify:
 					trainingset[item['relpath']] = item['tagpresent'][curtag]
 
 		if doclassif:
-			model = Smacpy(ffpath, trainingset, picklepath)
+			model = Smacpy(ffpath, trainingset, picklepath, trainsubsample)
 			numtp = 0
 			numfp = 0
 			numtn = 0
