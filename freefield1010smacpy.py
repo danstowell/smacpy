@@ -96,7 +96,7 @@ for curtag in tagstoclassify:
 					else:
 						numtn += 1
 
-			acc = float(numtp + numtn) / [numtp + numtn + numfp + numfn]
+			acc = float(numtp + numtn) / (numtp + numtn + numfp + numfn)
 
 			print("Fold %i: TP %i, FP %i, TN %i, FN %i" % (whichfold, numtp, numfp, numtn, numfn))
 
