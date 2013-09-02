@@ -52,6 +52,8 @@ if not os.path.exists(picklepath):
 # now the classification experiments
 csvout = open("%s/freefield1010smacpy.csv" % outpath, 'w', 1)
 csvout.write(','.join(['tag','fold','tp','fp','tn','fn','acc','f']) + '\n')
+tagsummaryout = open("%s/freefield1010smacpy_tagsummary.csv" % outpath, 'w', 1)
+tagsummaryout.write(','.join(['tag','numpos', 'ratio']) + '\n')
 for curtag in tagstoclassify:
 	print("-------------------------------------------------")
 	print("Running test with tag '%s'" % curtag)
@@ -68,6 +70,7 @@ for curtag in tagstoclassify:
 				numpositive += 1
 	# report what proportion of files has the tag
 	print("tag present in %i/%i items" % (numpositive, numtotal))
+	tagsummaryout.write(','.join(map(str, [curtag, numpositive, numpositive/float(numtotal)])) + '\n')
 	for whichfold in range(numfolds):
 		trainingset = {}
 		testingset  = {}
@@ -106,4 +109,5 @@ for curtag in tagstoclassify:
 
 
 csvout.close()
+tagsummaryout.close()
 
