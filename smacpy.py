@@ -67,15 +67,7 @@ class Smacpy:
 
 		allfeatures = {wavpath:self.file_to_features(wavfolder, wavpath) for wavpath in trainingdata}
 
-		# Determine the normalisation stats, and remember them
-		allconcat = np.vstack(list(allfeatures.values()))
-		self.means = np.mean(allconcat, 0)
-		self.invstds = np.std(allconcat, 0)
-		for i,val in enumerate(self.invstds):
-			if val == 0.0:
-				self.invstds[i] = 1.0
-			else:
-				self.invstds[i] = 1.0 / val
+		self.__calc_normalisation(allfeatures)
 
 		# For each label, compile a normalised concatenated list of features
 		aggfeatures = {}
@@ -105,6 +97,17 @@ class Smacpy:
 			self.gmms[label] = GMM(n_components=10) # , cvtype='full')
 			self.gmms[label].fit(aggf)
 		if verbose: print("  Trained %i classes from %i input files" % (len(self.gmms), len(trainingdata)))
+
+	def __calc_normalisation(self, allfeatures):
+		"Determine the normalisation stats, and remember them"
+		allconcat = np.vstack(list(allfeatures.values()))
+		self.means = np.mean(allconcat, 0)
+		self.invstds = np.std(allconcat, 0)
+		for i,val in enumerate(self.invstds):
+			if val == 0.0:
+				self.invstds[i] = 1.0
+			else:
+				self.invstds[i] = 1.0 / val
 
 	def __normalise(self, data):
 		"Normalises data using the mean and stdev of the training data - so that everything is on a common scale."
