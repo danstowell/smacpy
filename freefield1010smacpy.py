@@ -85,7 +85,7 @@ for curtag in tagstoclassify:
 			numtn = 0
 			numfn = 0
 			for itempath, gt in testingset.items():
-				decision = model.classify(ffpath, itempath)
+				decision = model.classify(ffpath, itempath, maxap=True)
 				if gt:
 					if decision:
 						numtp += 1
@@ -98,7 +98,7 @@ for curtag in tagstoclassify:
 						numtn += 1
 
 			acc = float(numtp + numtn) / (numtp + numtn + numfp + numfn)
-			f   = (2. * numtp) / (2. * numtp + numfn + numfp)
+			f   = (2. * numtp) / ((2. * numtp) + numfn + numfp)
 
 			print("Fold %i: TP %i, FP %i, TN %i, FN %i" % (whichfold, numtp, numfp, numtn, numfn))
 

@@ -57,6 +57,8 @@ class Smacpy:
 
 		self.cachedfeatures = None
 
+		self.priorweights = {}
+
 		if not trainingdata:
 			return   # bit hacky - initialise object but do no analysis - intended for the special precalc mode
 
@@ -87,6 +89,14 @@ class Smacpy:
 				aggfeatures[label] = normed
 			else:
 				aggfeatures[label] = np.vstack((aggfeatures[label], normed))
+			if label not in self.priorweights:
+				self.priorweights[label] = 0
+			self.priorweights[label] += 1
+
+		# We now normalise and log the prior weights
+		pwnormaliser = 1. / np.sum(self.priorweights.values())
+		for label, pw in self.priorweights.items():
+			self.priorweights[label] = np.log(pw * pwnormaliser)
 
 		# For each label's aggregated features, train a GMM and remember it
 		self.gmms = {}
@@ -108,8 +118,8 @@ class Smacpy:
 	def load_cached_features(self, picklepath):
 		self.cachedfeatures = pickle.load(open(picklepath, 'rb'))
 
-	def classify(self, wavfolder, wavpath):
-		"Specify the path to an audio file, and this returns the max-likelihood class, as a string label."
+	def classify(self, wavfolder, wavpath, maxap=False):
+		"Specify the path to an audio file, and this returns the max-likelihood class, as a string label. 'maxap=True' uses MAP not ML."
 		features = self.__normalise(self.file_to_features(wavfolder, wavpath))
 		# For each label GMM, find the overall log-likelihood and choose the strongest
 		bestlabel = ''
@@ -117,6 +127,8 @@ class Smacpy:
 		for label, gmm in self.gmms.items():
 			ll = gmm.eval(features)[0]
 			ll = np.sum(ll)
+			if maxap:
+				ll += self.priorweights[label]
 			if ll > bestll:
 				bestll = ll
 				bestlabel = label
