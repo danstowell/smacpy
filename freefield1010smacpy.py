@@ -15,8 +15,8 @@ ffpath = '/home/dan/freefield1010_v02'
 outpath = 'output'
 picklepath = 'ff1010.pickle'
 numfolds = 10
-tagstoclassify = [u'voice', u'city'  , u"nature", u"birdsong", u"water", u"train", u"people"]
-doclassif = True   # just so you can disable the heavy bit if needed
+tagstoclassify = [u'voice', u'city'  , u"nature", u"birdsong", u"water", u"train", u"people", u'__geotagged', u'__ccby']
+doclassif = False   # just so you can disable the heavy bit if needed
 trainsubsample = 0.2
 
 ################################
@@ -36,6 +36,11 @@ for globbed in iglob("%s/*/*.wav" % ffpath):
 	jsondata = json.load(jsonfp)
 	jsonfp.close()
 	item = {'itemid':itemid, 'whichfold':whichfold, 'tagpresent':{}, 'jsondata':jsondata, 'relpath':relpath}
+	# Here we add the fake pseudo-tags which we're going to treat analogously
+	if (u'geotag' in item['jsondata']) and (item['jsondata'].get(u'geotag') != None):
+		item['jsondata'][u'tags'].append(u'__geotagged')
+	if item['jsondata'][u'license'] == u"http://creativecommons.org/licenses/by/3.0/":
+		item['jsondata'][u'tags'].append(u'__ccby')
 	#print(item)
 	data[whichfold].append(item)
 	precalcwavlist.append(relpath)
