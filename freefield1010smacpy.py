@@ -88,7 +88,7 @@ for curtag in tagstoclassify:
 			numtn = 0
 			numfn = 0
 			for itempath, gt in testingset.items():
-				decision = model.classify(ffpath, itempath, maxap=True)
+				decision = model.classify(ffpath, itempath, maxap=False)
 				if gt:
 					if decision:
 						numtp += 1
