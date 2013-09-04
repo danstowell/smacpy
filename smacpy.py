@@ -103,11 +103,16 @@ class Smacpy:
 
 	def precalc_features(self, wavfolder, wavpaths, picklepath):
 		allfeatures = {wavpath:self.file_to_features(wavfolder, wavpath) for wavpath in wavpaths}
+
 		pickle.dump(allfeatures, open(picklepath, 'wb'), -1)
 		if verbose: print("Pre-calculated features for %i files, stored in %s" % (len(wavpaths), picklepath))
 
 	def load_cached_features(self, picklepath):
+		if verbose:
+			print("Loaded cached features from %s" % picklepath)
 		self.cachedfeatures = pickle.load(open(picklepath, 'rb'))
+		if verbose:
+			print("Loaded features for %i files" % len(self.cachedfeatures))
 
 	def classify(self, wavfolder, wavpath):
 		"Specify the path to an audio file, and this returns the max-likelihood class, as a string label."
@@ -184,16 +189,29 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--trainlist', default='NOT_SPECIFIED', help="Path to the file listing WAV files used for training")
 	parser.add_argument('-T', '--testlist',  default='NOT_SPECIFIED', help="Path to the file listing WAV files used for testing")
 	parser.add_argument('-o', '--outlist',   default='output.txt',    help="Path to write results to")
-	parser.add_argument('-p', '--picklepath',                help="Path to the pre-calculated features. If specified and not existing yet, it forces this invocation to be purely feature-precalc, applied to the files in the --trainpath folder. If specified and exists, the data is unpickled.")
+	parser.add_argument('-s', '--scratchdir',                help="Path to scratch folder for the pre-calculated features. If specified and not existing yet, it forces this invocation to be purely feature-precalc, applied to the files in the --trainpath folder. If specified and exists, the data is unpickled.")
+	parser.add_argument('-p', '--precalclist', help="Path to the file listing WAV files for precalc")
 	parser.add_argument('-q', dest='quiet', action='store_true', help="Be less verbose, don't output much text during processing")
 	args = vars(parser.parse_args())
 	verbose = not args['quiet']
 
-	if args['picklepath'] and not os.path.exists(args['picklepath']):
-		print("SPECIAL PRECALCULATION MODE. No inference will be done, but features will be pre-calculated.")
-		smaccer = Smacpy(args['trainpath'], None, None) # bit hacky - set second arg to None to initialise an object without analysing anything
-		smaccer.precalc_features(args['trainpath'], sorted(wavsfound['trainpath'].keys()), args['picklepath'])
-		sys.exit(0)
+	picklepath = os.path.join(args['scratchdir'], 'smacpy_features.pickle')
+
+	if args['precalclist']:
+		# Load the list
+		precalclist = []
+		for row in csv.reader(file(args['precalclist']), delimiter="\t"):
+			if len(row)==1:
+				precalclist.append(row[0])
+			elif len(row)>1:
+				raise ValueError("Row has a tab character in - SHOULD NOT happen for precalclist: ", row)
+		if True:   # not os.path.exists(picklepath):
+			print("SPECIAL PRECALCULATION MODE. No inference will be done, but features will be pre-calculated.")
+			print("Will analyse %i files, and write the results to %s" % (len(precalclist), picklepath))
+			smaccer = Smacpy('', None, None) # bit hacky - set second arg to None to initialise an object without analysing anything
+			smaccer.precalc_features('', sorted(precalclist), picklepath)
+			print("Precalculation complete.")
+			sys.exit(0)
 
 	# Load the training list as a dictionary of "filename->classification" data
 	trainlist = {}
@@ -202,6 +220,8 @@ if __name__ == '__main__':
 			trainlist[row[0]] = row[1]
 		elif len(row)>2:
 			raise ValueError("Row has more than one tab character in: ", row)
+		else:
+			raise ValueError("Row has no tab character in: ", row)
 
 	if verbose:
 		print("Training files to be used:")
@@ -222,10 +242,10 @@ if __name__ == '__main__':
 	# OK so let's go
 	outlist = file(args['outlist'], 'wb')
 	if verbose: print("TRAINING")
-	model = Smacpy('', trainlist)
+	model = Smacpy('', trainlist, picklepath)
 	if verbose: print("TESTING")
 	for wavpath in testlist:
-		result = model.classify(wavpath)
+		result = model.classify('', wavpath)
 		outlist.write("%s\t%s\n" % (wavpath, result))
 	outlist.close()
 	if verbose: print("Finished.")
