@@ -57,7 +57,7 @@ if not os.path.exists(picklepath):
 # now the classification experiments
 if doclassif:
 	csvout = open("%s/freefield1010smacpy.csv" % outpath, 'w', 1)
-	csvout.write(','.join(['tag','fold','tp','fp','tn','fn','acc','f']) + '\n')
+	csvout.write(','.join(['tag','fold','tp','fp','tn','fn','acc','f','tpr','fpr','auc']) + '\n')
 tagsummaryout = open("%s/freefield1010smacpy_tagsummary.csv" % outpath, 'w', 1)
 tagsummaryout.write(','.join(['tag','numpos', 'ratio']) + '\n')
 for curtag in tagstoclassify:
@@ -109,9 +109,13 @@ for curtag in tagstoclassify:
 			acc = float(numtp + numtn) / (numtp + numtn + numfp + numfn)
 			f   = (2. * numtp) / ((2. * numtp) + numfn + numfp)
 
+			fpr =  numfp / (numfp + numtn)
+			tpr =  numtp / (numtp + numfn)
+			auc = 0.5 * (1 + tpr - fpr)  # this AUC is calculated from the area of the convex hull between (0,0), the single empirical pos, and (1,1)
+
 			print("Fold %i: TP %i, FP %i, TN %i, FN %i" % (whichfold, numtp, numfp, numtn, numfn))
 
-			csvout.write(','.join(map(str, [curtag, whichfold, numtp, numfp, numtn, numfn, acc, f])) + '\n')
+			csvout.write(','.join(map(str, [curtag, whichfold, numtp, numfp, numtn, numfn, acc, f, tpr, fpr, auc])) + '\n')
 
 
 if doclassif:
