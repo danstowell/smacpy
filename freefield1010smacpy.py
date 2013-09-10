@@ -55,8 +55,9 @@ if not os.path.exists(picklepath):
 	smaccer.precalc_features(ffpath, precalcwavlist, picklepath)
 
 # now the classification experiments
-csvout = open("%s/freefield1010smacpy.csv" % outpath, 'w', 1)
-csvout.write(','.join(['tag','fold','tp','fp','tn','fn','acc','f']) + '\n')
+if doclassif:
+	csvout = open("%s/freefield1010smacpy.csv" % outpath, 'w', 1)
+	csvout.write(','.join(['tag','fold','tp','fp','tn','fn','acc','f']) + '\n')
 tagsummaryout = open("%s/freefield1010smacpy_tagsummary.csv" % outpath, 'w', 1)
 tagsummaryout.write(','.join(['tag','numpos', 'ratio']) + '\n')
 for curtag in tagstoclassify:
@@ -113,6 +114,7 @@ for curtag in tagstoclassify:
 			csvout.write(','.join(map(str, [curtag, whichfold, numtp, numfp, numtn, numfn, acc, f])) + '\n')
 
 
-csvout.close()
+if doclassif:
+	csvout.close()
 tagsummaryout.close()
 
