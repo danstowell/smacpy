@@ -4,10 +4,12 @@ import matplotlib.pyplot as plt
 #import matplotlib.cm as cm
 import csv
 import numpy as np
+import string
 
 ##############################
 infile = 'output/freefield1010smacpy_fromoctave_20130904.csv'
-outfile = 'output/plotff1010smacpyclassif.pdf'
+pdffile = 'output/plotff1010smacpyclassif.pdf'
+outfile = 'output/plotff1010smacpyclassif.tex'
 
 ##############################
 
@@ -31,6 +33,14 @@ for key, stuff in data.items():
 # sort in ascending order of score
 keys.sort(cmp=lambda a,b: cmp(data[a]['mean'], data[b]['mean']))
 
+# write CSV summary
+fp = open(outfile, 'wb')
+fp.write('Tag\t&\tAUC score (\%, Mean $\pm$ CI) \\\\\n')
+fp.write('\hline \n')
+for key in keys[::-1]:
+	fp.write('%s\t&\t%.1f $\pm$ %.1f \\\\\n' % (string.replace(key, '_', '\\_'), data[key]['mean'] * 100, data[key]['ci'] * 100))
+fp.close()
+
 # plot
 plt.figure()
 
@@ -45,5 +55,5 @@ yticks = np.arange(0.5, 1.01, 0.1)
 plt.yticks(yticks, [int(np.ceil(ytick * 100)) for ytick in yticks])
 plt.ylabel("AUC score (%)")
 
-plt.savefig(outfile, papertype='A4', format='pdf')
+plt.savefig(pdffile, papertype='A4', format='pdf')
 
