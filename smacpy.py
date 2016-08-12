@@ -92,7 +92,7 @@ class Smacpy:
 		bestlabel = ''
 		bestll = -9e99
 		for label, gmm in self.gmms.items():
-			ll = gmm.eval(features)[0]
+			ll = gmm.score_samples(features)[0]
 			ll = np.sum(ll)
 			if ll > bestll:
 				bestll = ll
