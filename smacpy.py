@@ -16,7 +16,7 @@ import argparse
 from glob import glob
 from scikits.audiolab import Sndfile
 from scikits.audiolab import Format
-from sklearn.mixture import GauusianMixture as GMM
+from sklearn.mixture import GaussianMixture as GMM
 
 from MFCC import melScaling
 
