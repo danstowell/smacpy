@@ -12,14 +12,14 @@ It is designed with two main aims:
 1. to provide a baseline against which to test more advanced audio classifiers;
 2. to provide a simple code example of a classifier which people are free to build on.
 
-It uses the very common workflow of taking audio, converting it frame-by-frame into MFCCs, and modelling the MFCC "bag of frames" with a GMM.
+It uses a workflow which was very common before the age of deep learning, and might still be useful for low-complexity audio tasks: take an audio clip as input, converting it frame-by-frame into MFCCs, and modelling the MFCC "bag of frames" with a GMM.
 
 Requirements
 ------------
-* Python 2.7 or later (it uses the 'argparse' module, not available earlier)
+* Python 2.7 or later, or Python 3
 * Python modules:
     * numpy
-    * [scikits.audiolab](http://pypi.python.org/pypi/scikits.audiolab)
+    * [librosa](http://librosa.org/)
     * [sckikit-learn](http://scikit-learn.sourceforge.net/)
 
 It has been tested on python 2.7 (on ubuntu 11.10 and 12.04). Not yet tested on python3 but it should be fine...
