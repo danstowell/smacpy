@@ -22,7 +22,7 @@ Requirements
     * [librosa](http://librosa.org/)
     * [sckikit-learn](http://scikit-learn.sourceforge.net/)
 
-It has been tested on python 2.7 (on ubuntu 11.10 and 12.04). Not yet tested on python3 but it should be fine...
+It has been tested on python 2.7 and 3.8 (on Ubuntu).
 
 
 Usage example 1: commandline
