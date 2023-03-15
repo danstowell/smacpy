@@ -193,6 +193,13 @@ if __name__ == '__main__':
 		grouped = {label:[] for label in labelsinuse}
 		for wavpath,label in wavsfound['trainpath'].items():
 			grouped[label].append(wavpath)
+		dropkeys = []
+		for label,collection in grouped.items():
+			if len(collection)==1:
+				print("   Warning: class '%s' has only 1 item, thus we will not use it in our crossvalidation test" % label)
+				dropkeys.append(label)
+		for akey in dropkeys:
+			del grouped[akey]
 		numfolds = min(len(collection) for collection in grouped.values())
 		# Each "fold" will be a collection of one item of each label
 		folds = [{wavpaths[index]:label for label,wavpaths in grouped.items()} for index in range(numfolds)]
