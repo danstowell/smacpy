@@ -14,8 +14,7 @@ import os.path
 import numpy as np
 import argparse
 from glob import glob
-from scikits.audiolab import Sndfile
-from scikits.audiolab import Format
+import librosa
 from sklearn.mixture import GaussianMixture as GMM
 
 from MFCC import melScaling
@@ -47,7 +46,7 @@ class Smacpy:
 		'wavfolder' is the base folder, to be prepended to all WAV paths.
 		'trainingdata' is a dictionary of wavpath:label pairs."""
 
-		self.mfccMaker = melScaling(int(fs), framelen/2, 40)
+		self.mfccMaker = melScaling(int(fs), int(framelen/2), 40)
 		self.mfccMaker.update()
 
 		allfeatures = {wavpath:self.file_to_features(os.path.join(wavfolder, wavpath)) for wavpath in trainingdata}
@@ -102,21 +101,19 @@ class Smacpy:
 		"Reads through a mono WAV file, converting each frame to the required features. Returns a 2D array."
 		if verbose: print("Reading %s" % wavpath)
 		if not os.path.isfile(wavpath): raise ValueError("path %s not found" % wavpath)
-		sf = Sndfile(wavpath, "r")
-		#if (sf.channels != 1) and verbose: print(" Sound file has multiple channels (%i) - channels will be mixed to mono." % sf.channels)
-		if sf.samplerate != fs:         raise ValueError("wanted sample rate %g - got %g." % (fs, sf.samplerate))
+		
+		audiodata, _ = librosa.load(wavpath, sr=fs, mono=True)
 		window = np.hamming(framelen)
 		features = []
+		chunkpos = 0
 		while(True):
 			try:
-				chunk = sf.read_frames(framelen, dtype=np.float32)
+				chunk = audiodata[chunkpos:chunkpos+framelen]
 				if len(chunk) != framelen:
-					print("Not read sufficient samples - returning")
+					#print("Not read sufficient samples - assuming end of file")
 					break
-				if sf.channels != 1:
-					chunk = np.mean(chunk, 1) # mixdown
 				framespectrum = np.fft.fft(window * chunk)
-				magspec = abs(framespectrum[:framelen/2])
+				magspec = abs(framespectrum[:int(framelen/2)])
 
 				# do the frequency warping and MFCC computation
 				melSpectrum = self.mfccMaker.warpSpectrum(magspec)
@@ -127,9 +124,11 @@ class Smacpy:
 				framefeatures = melCepstrum   # todo: include deltas? that can be your homework.
 
 				features.append(framefeatures)
+				
+				chunkpos += framelen
 			except RuntimeError:
 				break
-		sf.close()
+		if verbose: print("  Data shape: %s" % str(np.array(features).shape))
 		return np.array(features)
 
 #######################################################################
